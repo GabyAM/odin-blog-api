@@ -5,7 +5,7 @@ const Schema = mongoose.Schema;
 const Admin = User.discriminator(
     'Admin',
     new Schema({
-        posts: { type: Schema.Types.ObjectId, ref: 'Post' }
+        posts: [{ type: Schema.Types.ObjectId, ref: 'Post' }]
     })
 );
 
