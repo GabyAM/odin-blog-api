@@ -13,7 +13,7 @@ const commentSchema = new Schema(
         },
         comments: [{ type: Schema.Types.ObjectId, ref: 'Comment' }]
     },
-    { timestamps: true, toJSON: { virtuals: true } }
+    { timestamps: true }
 );
 
 commentSchema.virtual('url').get(function () {
