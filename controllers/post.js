@@ -6,3 +6,9 @@ exports.posts_list = asyncHandler(async (req, res, next) => {
 
     res.send(posts);
 });
+
+exports.post_detail = asyncHandler(async (req, res, next) => {
+    const post = await Post.findById(req.params.id).exec();
+
+    res.send(post);
+});
