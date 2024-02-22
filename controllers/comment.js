@@ -7,7 +7,12 @@ exports.comments_list = asyncHandler(async (req, res, next) => {
 });
 
 exports.comment_detail = asyncHandler(async (req, res, next) => {
-    const comment = await Comment.findById(req.params.id).exec();
+    const comment = await Comment.findById(req.params.id)
+        .populate({
+            path: 'user',
+            select: 'first_name last_name email is_admin'
+        })
+        .exec();
     res.send(comment);
 });
 exports.post_comments = asyncHandler(async (req, res, next) => {
@@ -18,7 +23,10 @@ exports.post_comments = asyncHandler(async (req, res, next) => {
         },
         'user text comments createdAt'
     )
-        .populate({ path: 'user', select: 'first_name last_name email' })
+        .populate({
+            path: 'user',
+            select: 'first_name last_name email is_admin'
+        })
         .populate({
             path: 'comments',
             select: 'user text comments createdAt',
@@ -28,10 +36,10 @@ exports.post_comments = asyncHandler(async (req, res, next) => {
                     select: 'user text createdAt comments url',
                     populate: {
                         path: 'user',
-                        select: 'first_name last_name email'
+                        select: 'first_name last_name email is_admin'
                     }
                 },
-                { path: 'user', select: 'first_name last_name email' }
+                { path: 'user', select: 'first_name last_name email is_admin' }
             ]
         })
         .exec();
