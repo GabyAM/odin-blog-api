@@ -11,4 +11,6 @@ router.get('/comments', comment_controller.comments_list);
 router.get('/post/:id', post_controller.post_detail);
 router.get('/user/:id', user_controller.user_detail);
 router.get('/comment/:id', comment_controller.comment_detail);
+
+router.get('/post/:id/comments', comment_controller.post_comments);
 module.exports = router;

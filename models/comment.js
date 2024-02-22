@@ -13,8 +13,12 @@ const commentSchema = new Schema(
         },
         comments: [{ type: Schema.Types.ObjectId, ref: 'Comment' }]
     },
-    { timestamps: true }
+    { timestamps: true, toJSON: { virtuals: true } }
 );
+
+commentSchema.virtual('url').get(function () {
+    return `/comment/:${this._id}`;
+});
 
 const Comment = mongoose.model('Comment', commentSchema);
 module.exports = Comment;
