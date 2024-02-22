@@ -1,12 +1,12 @@
 const express = require('express');
 const router = express.Router();
 
-const user_controller = require('../controllers/user');
 const post_controller = require('../controllers/post');
 const comment_controller = require('../controllers/comment');
 
-router.get('/users', user_controller.users_list);
-router.get('/posts', post_controller.posts_list);
-router.get('/comments', comment_controller.comments_list);
+router.get('/:id', post_controller.post_detail);
+
+router.get('/:id/comments', comment_controller.post_comments);
+router.get('/:id/comments/count', comment_controller.post_comment_count);
 
 module.exports = router;
