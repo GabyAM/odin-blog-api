@@ -12,3 +12,11 @@ exports.post_detail = asyncHandler(async (req, res, next) => {
 
     res.send(post);
 });
+
+exports.user_posts = asyncHandler(async (req, res, next) => {
+    const posts = await Post.find(
+        { author: req.params.id },
+        'title summary'
+    ).exec();
+    res.send(posts);
+});
