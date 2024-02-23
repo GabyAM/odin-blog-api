@@ -5,6 +5,8 @@ const post_controller = require('../controllers/post');
 
 router.post('/', user_controller.user_create);
 
+router.post('/login', user_controller.user_login);
+
 router.get('/:id', user_controller.user_detail);
 
 router.get('/:id/posts', post_controller.user_posts);

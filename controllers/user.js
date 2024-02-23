@@ -2,6 +2,7 @@ const asyncHandler = require('express-async-handler');
 const User = require('../models/user');
 const { body, validationResult } = require('express-validator');
 const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 
 exports.users_list = asyncHandler(async (req, res, next) => {
     const users = await User.find({}, 'name email is_admin').exec();
@@ -57,6 +58,46 @@ exports.user_create = [
                 );
             } catch (e) {
                 return next(e);
+            }
+        }
+    })
+];
+
+exports.user_login = [
+    body('email')
+        .isEmail()
+        .withMessage('incorrect email format')
+        .notEmpty()
+        .withMessage('email cannot be empty')
+        .escape(),
+    body('password', 'password must contain at least 8 characters')
+        .isLength({ min: 8 })
+        .escape(),
+    asyncHandler(async (req, res, next) => {
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).send(errors);
+        } else {
+            try {
+                const user = await User.findOne({ email: req.body.email });
+                if (!user) {
+                    throw new Error('Incorrect email');
+                }
+                const match = await bcrypt.compare(
+                    req.body.password,
+                    user.password
+                );
+                if (!match) {
+                    throw new Error('Incorrect password');
+                }
+                const token = jwt.sign(
+                    { email: req.body.email },
+                    'tokensecretchangelater',
+                    { expiresIn: '14 days' }
+                );
+                return res.status(200).send({ message: 'Auth passed', token });
+            } catch (e) {
+                return res.status(400).send(e.message);
             }
         }
     })
