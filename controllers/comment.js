@@ -11,13 +11,19 @@ exports.comments_list = asyncHandler(async (req, res, next) => {
 });
 
 exports.comment_detail = asyncHandler(async (req, res, next) => {
-    const comment = await Comment.findById(req.params.id)
-        .populate({
-            path: 'user',
-            select: 'name email is_admin'
-        })
-        .exec();
-    res.send(comment);
+    try {
+        const comment = await Comment.findById(req.params.id)
+            .populate({
+                path: 'user',
+                select: 'name email is_admin'
+            })
+            .exec();
+        res.send(comment);
+    } catch {
+        const error = new Error('comment not found');
+        error.status = 404;
+        return next(error);
+    }
 });
 
 exports.post_comment_create_post = [

@@ -104,7 +104,12 @@ exports.user_login = [
 ];
 
 exports.user_detail = asyncHandler(async (req, res, next) => {
-    const user = await User.findById(req.params.id, 'name email is_admin');
-
-    res.send(user);
+    try {
+        const user = await User.findById(req.params.id, 'name email is_admin');
+        res.send(user);
+    } catch {
+        const error = new Error('user not found');
+        error.status = 404;
+        return next(error);
+    }
 });

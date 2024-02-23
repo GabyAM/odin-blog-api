@@ -8,9 +8,14 @@ exports.posts_list = asyncHandler(async (req, res, next) => {
 });
 
 exports.post_detail = asyncHandler(async (req, res, next) => {
-    const post = await Post.findById(req.params.id).exec();
-
-    res.send(post);
+    try {
+        const post = await Post.findById(req.params.id).exec();
+        res.send(post);
+    } catch {
+        const error = new Error('post not found');
+        error.status = 404;
+        return next(error);
+    }
 });
 
 exports.user_posts = asyncHandler(async (req, res, next) => {
