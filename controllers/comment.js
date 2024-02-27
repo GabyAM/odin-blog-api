@@ -17,6 +17,21 @@ exports.comment_detail = asyncHandler(async (req, res, next) => {
                 path: 'user',
                 select: 'name email is_admin'
             })
+            .populate({
+                path: 'comments',
+                select: 'user text comments createdAt',
+                populate: [
+                    {
+                        path: 'comments',
+                        select: 'user text createdAt comments url',
+                        populate: {
+                            path: 'user',
+                            select: 'name email is_admin'
+                        }
+                    },
+                    { path: 'user', select: 'name email is_admin' }
+                ]
+            })
             .exec();
         res.send(comment);
     } catch {
