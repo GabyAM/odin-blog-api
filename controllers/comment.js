@@ -76,6 +76,48 @@ exports.post_comment_create_post = [
     })
 ];
 
+exports.comment_update_post = [
+    param('id').custom(async (value) => {
+        if (!mongoose.Types.ObjectId.isValid(value)) {
+            throw new Error('Invalid id');
+        }
+        const comment = await Comment.findById(value).exec();
+        if (!comment) {
+            throw new Error('Comment not found');
+        }
+        return comment;
+    }),
+    body('text', 'comment cannot be empty').trim().notEmpty().escape(),
+    asyncHandler(async (req, res, next) => {
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            res.status(400).send(errors);
+        }
+        next();
+    }),
+    passport.authenticate('jwt', { session: false }),
+    asyncHandler(async (req, res, next) => {
+        const oldComment = await Comment.findById(req.params.id).exec();
+        if (oldComment.user.toString() !== req.user.id) {
+            res.status(400).send('Cannot edit comments from other users');
+        } else {
+            const comment = new Comment({
+                _id: req.params.id,
+                user: oldComment.user,
+                text: req.body.text,
+                parent_comment: oldComment.parent_comment,
+                comments: oldComment.comments
+            });
+
+            await Comment.findByIdAndUpdate(comment._id, comment, {});
+            res.status(200).send({
+                message: 'Comment updated',
+                comment
+            });
+        }
+    })
+];
+
 exports.post_comment_count = asyncHandler(async (req, res, next) => {
     const commentCount = await Comment.countDocuments({ post: req.params.id });
     res.send({ count: commentCount });
