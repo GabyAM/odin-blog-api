@@ -6,7 +6,8 @@ const post_controller = require('../controllers/post');
 const comment_controller = require('../controllers/comment');
 
 router.get('/users', user_controller.users_list);
-router.get('/posts', post_controller.posts_list);
+router.get('/published_posts', post_controller.published_posts_list);
+router.get('/unpublished_posts', post_controller.unpublished_posts_list);
 router.get('/comments', comment_controller.comments_list);
 
 module.exports = router;
