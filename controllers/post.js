@@ -68,6 +68,30 @@ exports.post_detail = [
     })
 ];
 
+exports.post_create_post = [
+    passport.authenticate('jwt', { session: false }),
+    asyncHandler(async (req, res, next) => {
+        if (!req.user.is_admin) {
+            res.status(400).send(
+                'user is not authorized to perform this action'
+            );
+        }
+
+        const post = new Post({
+            author: req.user._id,
+            title: req.body.title || undefined,
+            summary: req.body.summary || undefined,
+            text: req.body.text || undefined
+        });
+
+        await post.save();
+        res.status(200).send({
+            message: 'Post created',
+            post
+        });
+    })
+];
+
     asyncHandler(async (req, res, next) => {
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
