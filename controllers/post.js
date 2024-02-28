@@ -92,6 +92,19 @@ exports.post_create_post = [
     })
 ];
 
+exports.post_update_post = [
+    body('title', 'title is required').exists().escape(),
+    body('summary', 'summary is required').exists().escape(),
+    body('text', 'text is required').exists().escape(),
+    param('id').custom(async (value) => {
+        if (!mongoose.Types.ObjectId.isValid(value)) {
+            throw new Error('invalid id');
+        }
+        const post = await Post.findById(value).exec();
+        if (!post) {
+            throw new Error('Post not found');
+        }
+    }),
     asyncHandler(async (req, res, next) => {
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
@@ -108,17 +121,46 @@ exports.post_create_post = [
         }
 
         const post = new Post({
+            _id: req.params.id,
             title: req.body.title,
             author: req.user._id,
-            summary: req.body.title,
+            summary: req.body.summary,
             text: req.body.text
         });
 
-        await post.save();
+        await post.findByIdAndUpdate(post._id, post, {});
         res.status(200).send({
-            message: 'Post created',
+            message: 'Post updated',
             post
         });
+    })
+];
+
+exports.post_publish_post = [
+    param('id').custom(async (value) => {
+        if (!mongoose.Types.ObjectId.isValid(value)) {
+            throw new Error('invalid id');
+        }
+        const post = await Post.findById(value).exec();
+        if (!post) {
+            throw new Error('post not found');
+        }
+    }),
+    passport.authenticate('jwt', { session: false }),
+    asyncHandler(async (req, res, next) => {
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            res.status(400).send(errors);
+        } else {
+            try {
+                const post = await Post.findById(req.params.id).exec();
+                post.is_published = true;
+                await post.save();
+                res.send(post);
+            } catch (e) {
+                res.status(400).send(e);
+            }
+        }
     })
 ];
 
