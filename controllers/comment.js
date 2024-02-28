@@ -4,6 +4,19 @@ const { body, param, validationResult } = require('express-validator');
 const passport = require('../passport');
 const Post = require('../models/post');
 const { default: mongoose } = require('mongoose');
+const validationMiddleware = require('../middleware/validation');
+const { validatePostId } = require('./post');
+
+const validateId = () =>
+    param('id').custom(async (value) => {
+        if (!mongoose.Types.ObjectId.isValid(value)) {
+            throw new Error('invalid comment id');
+        }
+        const post = await Comment.findById(value).exec();
+        if (!post) {
+            throw new Error('comment not found');
+        }
+    });
 
 exports.comments_list = asyncHandler(async (req, res, next) => {
     const comments = await Comment.find({}).exec();
@@ -42,24 +55,9 @@ exports.comment_detail = asyncHandler(async (req, res, next) => {
 });
 
 exports.post_comment_create_post = [
-    param('id').custom(async (value) => {
-        if (!mongoose.Types.ObjectId.isValid(value)) {
-            throw new Error('invalid post id');
-        }
-        const post = await Post.findById(value).exec();
-        if (!post) {
-            throw new Error('post not found');
-        }
-    }),
+    validatePostId(),
     body('text', 'comment cannot be empty').notEmpty().escape(),
-
-    asyncHandler(async (req, res, next) => {
-        const errors = validationResult(req);
-        if (!errors.isEmpty()) {
-            res.status(400).send(errors);
-        }
-        next();
-    }),
+    validationMiddleware,
     passport.authenticate('jwt', { session: false }),
     asyncHandler(async (req, res, next) => {
         const comment = new Comment({
@@ -77,24 +75,9 @@ exports.post_comment_create_post = [
 ];
 
 exports.comment_update_post = [
-    param('id').custom(async (value) => {
-        if (!mongoose.Types.ObjectId.isValid(value)) {
-            throw new Error('Invalid id');
-        }
-        const comment = await Comment.findById(value).exec();
-        if (!comment) {
-            throw new Error('Comment not found');
-        }
-        return comment;
-    }),
+    validateId(),
     body('text', 'comment cannot be empty').trim().notEmpty().escape(),
-    asyncHandler(async (req, res, next) => {
-        const errors = validationResult(req);
-        if (!errors.isEmpty()) {
-            res.status(400).send(errors);
-        }
-        next();
-    }),
+    validationMiddleware,
     passport.authenticate('jwt', { session: false }),
     asyncHandler(async (req, res, next) => {
         const oldComment = await Comment.findById(req.params.id).exec();
