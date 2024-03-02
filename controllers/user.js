@@ -82,7 +82,7 @@ exports.user_login = [
                 throw new Error('Incorrect password');
             }
             const token = jwt.sign(
-                { email: req.body.email },
+                { id: user._id, name: user.name, email: user.email },
                 'tokensecretchangelater',
                 { expiresIn: '14 days' }
             );
