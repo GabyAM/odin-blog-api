@@ -12,8 +12,8 @@ const validateId = () =>
         if (!mongoose.Types.ObjectId.isValid(value)) {
             throw new Error('invalid comment id');
         }
-        const post = await Comment.findById(value).exec();
-        if (!post) {
+        const comment = await Comment.findById(value).exec();
+        if (!comment) {
             throw new Error('comment not found');
         }
     });
@@ -55,11 +55,20 @@ exports.comment_detail = asyncHandler(async (req, res, next) => {
 });
 
 exports.post_comment_create_post = [
-    validatePostId(),
+    param('id').custom(async (value) => {
+        if (!mongoose.Types.ObjectId.isValid(value)) {
+            throw new Error('invalid comment id');
+        }
+    }),
     body('text', 'comment cannot be empty').notEmpty().escape(),
     validationMiddleware,
     passport.authenticate('jwt', { session: false }),
     asyncHandler(async (req, res, next) => {
+        const post = await Post.findById(req.params.id).exec();
+        if (!post) {
+            res.status(404).send('post not found');
+        }
+
         const comment = new Comment({
             user: req.user._id,
             post: req.params.id,
@@ -67,6 +76,10 @@ exports.post_comment_create_post = [
         });
 
         await comment.save();
+
+        post.comment_count++;
+        await post.save();
+
         res.status(200).send({
             message: 'comment created',
             comment

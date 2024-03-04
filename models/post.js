@@ -7,6 +7,7 @@ const postSchema = new Schema(
         title: { type: String },
         summary: { type: String },
         text: { type: String },
+        comment_count: { type: Number, default: 0 },
         is_published: { type: Boolean, default: false }
     },
     { timestamps: true }
@@ -15,7 +16,7 @@ const postSchema = new Schema(
 postSchema.path('title').validate(function (value) {
     if (this.is_published) {
         return (
-            typeof value === 'string' && value.length > 8 && value.length < 80
+            typeof value === 'string' && value.length >= 8 && value.length <= 80
         );
     }
     return true;
@@ -23,7 +24,7 @@ postSchema.path('title').validate(function (value) {
 postSchema.path('summary').validate(function (value) {
     if (this.is_published) {
         return (
-            typeof value === 'string' && value.length > 8 && value.length < 80
+            typeof value === 'string' && value.length >= 8 && value.length <= 80
         );
     }
     return true;
