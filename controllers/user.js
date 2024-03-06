@@ -74,7 +74,7 @@ exports.user_create = [
                 res.status(200).send(user);
             });
         } catch (e) {
-            return next(e);
+            res.status(400).send(e);
         }
     })
 ];
