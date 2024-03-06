@@ -55,16 +55,11 @@ exports.post_detail = [
                 { session: false },
                 function (err, user) {
                     if (err) {
-                        res.status(400).send({
-                            errors: { authorization: err }
-                        });
+                        res.status(400).send(err);
                     } else if (!user || !user.is_admin) {
-                        res.status(401).send({
-                            errors: {
-                                authorization:
-                                    'User is not authorized to perform this action'
-                            }
-                        });
+                        res.status(401).send(
+                            'User is not authorized to perform this action'
+                        );
                     } else res.send(post);
                 }
             )(req, res, next);
@@ -76,12 +71,9 @@ exports.post_create_post = [
     passport.authenticate('jwt', { session: false }),
     asyncHandler(async (req, res, next) => {
         if (!req.user.is_admin) {
-            res.status(400).send({
-                errors: {
-                    authorization:
-                        'User is not authorized to perform this action'
-                }
-            });
+            res.status(400).send(
+                'User is not authorized to perform this action'
+            );
         }
 
         const post = new Post({
@@ -109,12 +101,9 @@ exports.post_update_post = [
     passport.authenticate('jwt', { session: false }),
     asyncHandler(async (req, res, next) => {
         if (!req.user.is_admin) {
-            res.status(400).send({
-                errors: {
-                    authorization:
-                        'User is not authorized to perform this action'
-                }
-            });
+            res.status(400).send(
+                'User is not authorized to perform this action'
+            );
         }
 
         const post = new Post({
