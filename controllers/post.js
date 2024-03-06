@@ -4,6 +4,8 @@ const { body, param, validationResult } = require('express-validator');
 const passport = require('../passport');
 const { default: mongoose } = require('mongoose');
 const validationMiddleware = require('../middleware/validation');
+const mapErrors = require('../mappers/error');
+const requireBody = require('../middleware/bodyRequire');
 
 const validateId = () =>
     param('id').custom(async (value) => {
@@ -44,11 +46,7 @@ exports.post_detail = [
     validateId(),
     validationMiddleware,
     asyncHandler(async (req, res, next) => {
-        const post = await Post.findById(req.params.id)
-            .exec()
-            .catch((e) => {
-                res.status(400).send(e);
-            });
+        const post = await Post.findById(req.params.id).exec();
         if (post.is_published) {
             res.send(post);
         } else {
@@ -57,11 +55,16 @@ exports.post_detail = [
                 { session: false },
                 function (err, user) {
                     if (err) {
-                        res.status(400).send(err);
+                        res.status(400).send({
+                            errors: { authorization: err }
+                        });
                     } else if (!user || !user.is_admin) {
-                        res.status(401).send(
-                            'User is not authorized to perform this action'
-                        );
+                        res.status(401).send({
+                            errors: {
+                                authorization:
+                                    'User is not authorized to perform this action'
+                            }
+                        });
                     } else res.send(post);
                 }
             )(req, res, next);
@@ -73,9 +76,12 @@ exports.post_create_post = [
     passport.authenticate('jwt', { session: false }),
     asyncHandler(async (req, res, next) => {
         if (!req.user.is_admin) {
-            res.status(400).send(
-                'user is not authorized to perform this action'
-            );
+            res.status(400).send({
+                errors: {
+                    authorization:
+                        'User is not authorized to perform this action'
+                }
+            });
         }
 
         const post = new Post({
@@ -94,6 +100,7 @@ exports.post_create_post = [
 ];
 
 exports.post_update_post = [
+    requireBody,
     body('title', 'title is required').exists().escape(),
     body('summary', 'summary is required').exists().escape(),
     body('text', 'text is required').exists().escape(),
@@ -102,9 +109,12 @@ exports.post_update_post = [
     passport.authenticate('jwt', { session: false }),
     asyncHandler(async (req, res, next) => {
         if (!req.user.is_admin) {
-            res.status(400).send(
-                'user is not authorized to perform this action'
-            );
+            res.status(400).send({
+                errors: {
+                    authorization:
+                        'User is not authorized to perform this action'
+                }
+            });
         }
 
         const post = new Post({
@@ -134,7 +144,7 @@ exports.post_publish_post = [
             await post.save();
             res.send(post);
         } catch (e) {
-            res.status(400).send(e);
+            res.status(400).send({ errors: mapErrors(e) });
         }
     })
 ];

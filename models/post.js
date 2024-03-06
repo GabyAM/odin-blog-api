@@ -20,7 +20,7 @@ postSchema.path('title').validate(function (value) {
         );
     }
     return true;
-});
+}, 'Title length must be between 8 and 80 characters');
 postSchema.path('summary').validate(function (value) {
     if (this.is_published) {
         return (
@@ -28,13 +28,13 @@ postSchema.path('summary').validate(function (value) {
         );
     }
     return true;
-});
+}, 'Summary length must be between 8 and 80 characters');
 postSchema.path('text').validate(function (value) {
     if (this.is_published) {
         return typeof value === 'string' && value.length > 50;
     }
     return true;
-});
+}, 'Text must have more than 50 characters');
 
 postSchema.pre('save', function (next) {
     if (!this.is_published) {
