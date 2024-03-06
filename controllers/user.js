@@ -5,6 +5,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { default: mongoose } = require('mongoose');
 const validationMiddleware = require('../middleware/validation');
+const requireBody = require('../middleware/bodyRequire');
 
 exports.users_list = asyncHandler(async (req, res, next) => {
     const users = await User.find({}, 'name email is_admin').exec();
@@ -12,8 +13,20 @@ exports.users_list = asyncHandler(async (req, res, next) => {
 });
 
 exports.user_create = [
-    body('name', 'name must not be empty').notEmpty().escape(),
+    requireBody,
+    body('name')
+        .bail()
+        .exists()
+        .withMessage('You need to provide a name')
+        .bail()
+        .notEmpty()
+        .withMessage('name must not be empty')
+        .escape(),
     body('email')
+        .bail()
+        .exists()
+        .withMessage('You need to provide an email')
+        .bail()
         .isEmail()
         .withMessage('email is not in the correct format')
         .custom(async (value) => {
@@ -23,12 +36,21 @@ exports.user_create = [
             }
         })
         .escape(),
-    body('password', 'Password must contain at least 8 characters')
+    body('password')
+        .bail()
+        .exists()
+        .withMessage('You need to provide a password')
+        .bail()
         .isLength({
             min: 5
         })
+        .withMessage('Password must contain at least 8 characters')
         .escape(),
     body('passwordConfirm')
+        .bail()
+        .exists()
+        .withMessage('You need to provide a password confirm')
+        .bail()
         .custom((value, { req }) => {
             return value === req.body.password;
         })
@@ -58,28 +80,41 @@ exports.user_create = [
 ];
 
 exports.user_login = [
+    requireBody,
     body('email')
-        .isEmail()
-        .withMessage('incorrect email format')
+        .bail()
+        .exists()
+        .withMessage('You need to provide an email')
+        .bail()
         .notEmpty()
         .withMessage('email cannot be empty')
+        .bail()
+        .isEmail()
+        .withMessage('incorrect email format')
         .escape(),
-    body('password', 'password must contain at least 8 characters')
+    body('password')
+        .bail()
+        .exists()
+        .withMessage('You need to provide a password')
+        .bail()
         .isLength({ min: 8 })
+        .withMessage('password must contain at least 8 characters')
         .escape(),
     validationMiddleware,
     asyncHandler(async (req, res, next) => {
         try {
             const user = await User.findOne({ email: req.body.email });
             if (!user) {
-                throw new Error('Incorrect email');
+                res.status(404).send({ errors: { email: 'Incorrect email' } });
             }
             const match = await bcrypt.compare(
                 req.body.password,
                 user.password
             );
             if (!match) {
-                throw new Error('Incorrect password');
+                res.status(404).send({
+                    errors: { password: 'Incorrect password' }
+                });
             }
             const token = jwt.sign(
                 { id: user._id, name: user.name, email: user.email },
