@@ -5,7 +5,7 @@ const passport = require('../passport');
 const Post = require('../models/post');
 const { default: mongoose } = require('mongoose');
 const validationMiddleware = require('../middleware/validation');
-const { validatePostId } = require('./post');
+const { validatePostId } = require('./post.js');
 
 const validateId = () =>
     param('id').custom(async (value) => {
@@ -23,36 +23,38 @@ exports.comments_list = asyncHandler(async (req, res, next) => {
     res.send(comments);
 });
 
-exports.comment_detail = asyncHandler(async (req, res, next) => {
-    try {
-        const comment = await Comment.findById(req.params.id)
-            .populate({
-                path: 'user',
-                select: 'name email is_admin'
-            })
-            .populate({
-                path: 'comments',
-                select: 'user text comments createdAt',
-                populate: [
-                    {
-                        path: 'comments',
-                        select: 'user text createdAt comments url',
-                        populate: {
-                            path: 'user',
-                            select: 'name email is_admin'
-                        }
-                    },
-                    { path: 'user', select: 'name email is_admin' }
-                ]
-            })
-            .exec();
-        res.send(comment);
-    } catch {
-        const error = new Error('comment not found');
-        error.status = 404;
-        return next(error);
-    }
-});
+exports.comment_detail = [
+    validateId(),
+    validationMiddleware,
+    asyncHandler(async (req, res, next) => {
+        try {
+            const comment = await Comment.findById(req.params.id)
+                .populate({
+                    path: 'user',
+                    select: 'name email is_admin'
+                })
+                .populate({
+                    path: 'comments',
+                    select: 'user text comments createdAt',
+                    populate: [
+                        {
+                            path: 'comments',
+                            select: 'user text createdAt comments url',
+                            populate: {
+                                path: 'user',
+                                select: 'name email is_admin'
+                            }
+                        },
+                        { path: 'user', select: 'name email is_admin' }
+                    ]
+                })
+                .exec();
+            res.send(comment);
+        } catch (e) {
+            res.status(400).send(e);
+        }
+    })
+];
 
 exports.post_comment_create_post = [
     param('id').custom(async (value) => {
@@ -60,7 +62,14 @@ exports.post_comment_create_post = [
             throw new Error('invalid comment id');
         }
     }),
-    body('text', 'comment cannot be empty').notEmpty().escape(),
+    body('text')
+        .bail()
+        .exists()
+        .withMessage('You need to provide a text')
+        .bail()
+        .notEmpty()
+        .withMessage('comment cannot be empty')
+        .escape(),
     validationMiddleware,
     passport.authenticate('jwt', { session: false }),
     asyncHandler(async (req, res, next) => {
@@ -114,39 +123,49 @@ exports.comment_update_post = [
     })
 ];
 
-exports.post_comment_count = asyncHandler(async (req, res, next) => {
-    const commentCount = await Comment.countDocuments({ post: req.params.id });
-    res.send({ count: commentCount });
-});
+exports.post_comment_count = [
+    validatePostId(),
+    validationMiddleware,
+    asyncHandler(async (req, res, next) => {
+        const commentCount = await Comment.countDocuments({
+            post: req.params.id
+        });
+        res.send({ count: commentCount });
+    })
+];
 
-exports.post_comments = asyncHandler(async (req, res, next) => {
-    const comments = await Comment.find(
-        {
-            post: req.params.id,
-            parent_comment: null
-        },
-        'user text comments createdAt'
-    )
-        .populate({
-            path: 'user',
-            select: 'name email is_admin'
-        })
-        .populate({
-            path: 'comments',
-            select: 'user text comments createdAt',
-            populate: [
-                {
-                    path: 'comments',
-                    select: 'user text createdAt comments url',
-                    populate: {
-                        path: 'user',
-                        select: 'name email is_admin'
-                    }
-                },
-                { path: 'user', select: 'name email is_admin' }
-            ]
-        })
-        .exec();
+exports.post_comments = [
+    validatePostId(),
+    validationMiddleware,
+    asyncHandler(async (req, res, next) => {
+        const comments = await Comment.find(
+            {
+                post: req.params.id,
+                parent_comment: null
+            },
+            'user text comments createdAt'
+        )
+            .populate({
+                path: 'user',
+                select: 'name email is_admin'
+            })
+            .populate({
+                path: 'comments',
+                select: 'user text comments createdAt',
+                populate: [
+                    {
+                        path: 'comments',
+                        select: 'user text createdAt comments url',
+                        populate: {
+                            path: 'user',
+                            select: 'name email is_admin'
+                        }
+                    },
+                    { path: 'user', select: 'name email is_admin' }
+                ]
+            })
+            .exec();
 
-    res.send(comments);
-});
+        res.send(comments);
+    })
+];
