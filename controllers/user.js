@@ -74,7 +74,7 @@ exports.user_create = [
                 res.status(200).send(user);
             });
         } catch (e) {
-            res.status(400).send(e);
+            res.status(500).send(e);
         }
     })
 ];
@@ -105,14 +105,14 @@ exports.user_login = [
         try {
             const user = await User.findOne({ email: req.body.email });
             if (!user) {
-                res.status(404).send({ errors: { email: 'Incorrect email' } });
+                res.status(401).send({ errors: { email: 'Incorrect email' } });
             }
             const match = await bcrypt.compare(
                 req.body.password,
                 user.password
             );
             if (!match) {
-                res.status(404).send({
+                res.status(401).send({
                     errors: { password: 'Incorrect password' }
                 });
             }
@@ -123,7 +123,7 @@ exports.user_login = [
             );
             return res.status(200).send({ message: 'Auth passed', token });
         } catch (e) {
-            return res.status(400).send(e.message);
+            return res.status(500).send(e.message);
         }
     })
 ];

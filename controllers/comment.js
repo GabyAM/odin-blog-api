@@ -51,7 +51,7 @@ exports.comment_detail = [
                 .exec();
             res.send(comment);
         } catch (e) {
-            res.status(400).send(e);
+            res.status(500).send(e);
         }
     })
 ];
@@ -62,6 +62,7 @@ exports.post_comment_create_post = [
             throw new Error('invalid comment id');
         }
     }),
+    validationMiddleware,
     body('text')
         .bail()
         .exists()
@@ -98,13 +99,14 @@ exports.post_comment_create_post = [
 
 exports.comment_update_post = [
     validateId(),
+    validationMiddleware,
     body('text', 'comment cannot be empty').trim().notEmpty().escape(),
     validationMiddleware,
     passport.authenticate('jwt', { session: false }),
     asyncHandler(async (req, res, next) => {
         const oldComment = await Comment.findById(req.params.id).exec();
         if (oldComment.user.toString() !== req.user.id) {
-            res.status(400).send('Cannot edit comments from other users');
+            res.status(403).send('Cannot edit comments from other users');
         } else {
             const comment = new Comment({
                 _id: req.params.id,
