@@ -46,7 +46,7 @@ exports.user_create = [
         })
         .withMessage('Password must contain at least 8 characters')
         .escape(),
-    body('passwordConfirm')
+    body('password-confirm')
         .bail()
         .exists()
         .withMessage('You need to provide a password confirm')
