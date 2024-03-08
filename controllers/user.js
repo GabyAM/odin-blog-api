@@ -116,12 +116,23 @@ exports.user_login = [
                     errors: { password: 'Incorrect password' }
                 });
             }
-            const token = jwt.sign(
+            const accessToken = jwt.sign(
+                { id: user._id, name: user.name, email: user.email },
+                'tokensecretchangelater',
+                { expiresIn: '1m' }
+            );
+            const refreshToken = jwt.sign(
                 { id: user._id, name: user.name, email: user.email },
                 'tokensecretchangelater',
                 { expiresIn: '14 days' }
             );
-            return res.status(200).send({ message: 'Auth passed', token });
+            return res
+                .status(200)
+                .cookie('refreshToken', refreshToken, {
+                    httpOnly: true,
+                    sameSite: 'strict'
+                })
+                .send({ message: 'Auth passed', accessToken });
         } catch (e) {
             return res.status(500).send(e.message);
         }
