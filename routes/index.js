@@ -11,5 +11,6 @@ router.get('/published_posts', post_controller.published_posts_list);
 router.get('/unpublished_posts', post_controller.unpublished_posts_list);
 router.get('/comments', comment_controller.comments_list);
 
+router.post('/login', auth_controller.login);
 router.post('/refresh', auth_controller.refresh);
 module.exports = router;
