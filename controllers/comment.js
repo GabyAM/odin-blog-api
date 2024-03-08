@@ -1,11 +1,11 @@
 const asyncHandler = require('express-async-handler');
 const Comment = require('../models/comment');
 const { body, param, validationResult } = require('express-validator');
-const passport = require('../passport');
 const Post = require('../models/post');
 const { default: mongoose } = require('mongoose');
 const validationMiddleware = require('../middleware/validation');
 const { validatePostId } = require('./post.js');
+const authenticate = require('../middleware/authentication.js');
 
 const validateId = () =>
     param('id').custom(async (value) => {
@@ -72,7 +72,7 @@ exports.post_comment_create_post = [
         .withMessage('comment cannot be empty')
         .escape(),
     validationMiddleware,
-    passport.authenticate('jwt', { session: false }),
+    authenticate,
     asyncHandler(async (req, res, next) => {
         const post = await Post.findById(req.params.id).exec();
         if (!post) {
@@ -102,7 +102,7 @@ exports.comment_update_post = [
     validationMiddleware,
     body('text', 'comment cannot be empty').trim().notEmpty().escape(),
     validationMiddleware,
-    passport.authenticate('jwt', { session: false }),
+    authenticate,
     asyncHandler(async (req, res, next) => {
         const oldComment = await Comment.findById(req.params.id).exec();
         if (oldComment.user.toString() !== req.user.id) {

@@ -1,11 +1,11 @@
 const asyncHandler = require('express-async-handler');
 const Post = require('../models/post');
 const { body, param, validationResult } = require('express-validator');
-const passport = require('../passport');
 const { default: mongoose } = require('mongoose');
 const validationMiddleware = require('../middleware/validation');
 const mapErrors = require('../mappers/error');
 const requireBody = require('../middleware/bodyRequire');
+const authenticate = require('../middleware/authentication');
 
 const validateId = () =>
     param('id').custom(async (value) => {
@@ -28,7 +28,7 @@ exports.published_posts_list = asyncHandler(async (req, res, next) => {
 });
 
 exports.unpublished_posts_list = [
-    passport.authenticate('jwt', { session: false }),
+    authenticate,
     asyncHandler(async (req, res, next) => {
         if (!req.user.is_admin) {
             res.status(401).send(
@@ -50,25 +50,21 @@ exports.post_detail = [
         if (post.is_published) {
             res.send(post);
         } else {
-            passport.authenticate(
-                'jwt',
-                { session: false },
-                function (err, user) {
-                    if (err) {
-                        res.status(500).send(err);
-                    } else if (!user || !user.is_admin) {
-                        res.status(401).send(
-                            'User is not authorized to perform this action'
-                        );
-                    } else res.send(post);
+            authenticate(req, res, () => {
+                if (!req.user.is_admin) {
+                    res.status(401).send(
+                        'User is not authorized to perform this action'
+                    );
+                } else {
+                    res.send(post);
                 }
-            )(req, res, next);
+            });
         }
     })
 ];
 
 exports.post_create_post = [
-    passport.authenticate('jwt', { session: false }),
+    authenticate,
     asyncHandler(async (req, res, next) => {
         if (!req.user.is_admin) {
             res.status(401).send(
@@ -99,7 +95,7 @@ exports.post_update_post = [
     body('summary', 'summary is required').exists().escape(),
     body('text', 'text is required').exists().escape(),
     validationMiddleware,
-    passport.authenticate('jwt', { session: false }),
+    authenticate,
     asyncHandler(async (req, res, next) => {
         if (!req.user.is_admin) {
             res.status(401).send(
@@ -126,7 +122,7 @@ exports.post_update_post = [
 exports.post_publish_post = [
     validateId(),
     validationMiddleware,
-    passport.authenticate('jwt', { session: false }),
+    authenticate,
     asyncHandler(async (req, res, next) => {
         try {
             const post = await Post.findById(req.params.id).exec();
