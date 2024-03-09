@@ -10,24 +10,25 @@ exports.refresh = (req, res, next) => {
     const refreshToken = req.cookies.refreshToken;
     if (!refreshToken) {
         res.status(401).send('Unable to refresh without refresh token');
-    }
-    try {
-        const decodedRefreshToken = jwt.verify(
-            refreshToken,
-            'tokensecretchangelater'
-        );
-        const accessToken = jwt.sign(
-            {
-                id: decodedRefreshToken.id,
-                name: decodedRefreshToken.name,
-                email: decodedRefreshToken.email
-            },
-            'tokensecretchangelater',
-            { expiresIn: '1m' }
-        );
-        res.send({ message: 'token refreshed', token: accessToken });
-    } catch (e) {
-        res.status(400).send('Invalid refresh token');
+    } else {
+        try {
+            const decodedRefreshToken = jwt.verify(
+                refreshToken,
+                'tokensecretchangelater'
+            );
+            const accessToken = jwt.sign(
+                {
+                    id: decodedRefreshToken.id,
+                    name: decodedRefreshToken.name,
+                    email: decodedRefreshToken.email
+                },
+                'tokensecretchangelater',
+                { expiresIn: '5m' }
+            );
+            res.send({ message: 'token refreshed', accessToken });
+        } catch (e) {
+            res.status(400).send('Invalid refresh token');
+        }
     }
 };
 
@@ -71,7 +72,7 @@ exports.login = [
             const accessToken = jwt.sign(
                 { id: user._id, name: user.name, email: user.email },
                 'tokensecretchangelater',
-                { expiresIn: '1m' }
+                { expiresIn: '5m' }
             );
             const refreshToken = jwt.sign(
                 { id: user._id, name: user.name, email: user.email },
@@ -81,8 +82,7 @@ exports.login = [
             return res
                 .status(200)
                 .cookie('refreshToken', refreshToken, {
-                    httpOnly: true,
-                    sameSite: 'strict'
+                    httpOnly: true
                 })
                 .send({ message: 'Auth passed', accessToken });
         } catch (e) {

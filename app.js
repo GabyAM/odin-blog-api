@@ -21,7 +21,7 @@ async function main() {
     await mongoose.connect(mongoDB);
 }
 
-app.use(cors());
+app.use(cors({ origin: 'http://localhost:5173', credentials: true })); // update origin url when ready for production
 app.use(logger('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
