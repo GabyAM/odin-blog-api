@@ -11,35 +11,43 @@ function getAggregationPipeline(matchStage, sortParameters, limit) {
         {
             $sort: sortStage
         },
-        { $limit: limit },
         {
             $facet: {
-                results: []
+                metadata: [{ $count: 'count' }],
+                results: [{ $limit: limit }]
             }
         },
         {
             $addFields: {
                 metadata: {
-                    count: { $size: '$results' },
-                    nextPageParams: {
-                        $cond: {
-                            if: { $eq: [{ $size: '$results' }, limit] },
-                            then: {
-                                $let: {
-                                    vars: {
-                                        lastElement: {
-                                            $arrayElemAt: ['$results', -1]
+                    $mergeObjects: [
+                        { $arrayElemAt: ['$metadata', 0] },
+                        {
+                            nextPageParams: {
+                                $cond: {
+                                    if: { $eq: [{ $size: '$results' }, limit] },
+                                    then: {
+                                        $let: {
+                                            vars: {
+                                                lastElement: {
+                                                    $arrayElemAt: [
+                                                        '$results',
+                                                        -1
+                                                    ]
+                                                }
+                                            },
+                                            in: {
+                                                _id: '$$lastElement._id',
+                                                createdAt:
+                                                    '$$lastElement.createdAt'
+                                            }
                                         }
                                     },
-                                    in: {
-                                        _id: '$$lastElement._id',
-                                        createdAt: '$$lastElement.createdAt'
-                                    }
+                                    else: null
                                 }
-                            },
-                            else: null
+                            }
                         }
-                    }
+                    ]
                 }
             }
         }
