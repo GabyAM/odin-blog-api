@@ -1,11 +1,13 @@
 const asyncHandler = require('express-async-handler');
 const Post = require('../models/post');
-const { body, param, validationResult } = require('express-validator');
+const { body, param } = require('express-validator');
 const { default: mongoose } = require('mongoose');
 const validationMiddleware = require('../middleware/validation');
 const mapErrors = require('../mappers/error');
 const requireBody = require('../middleware/bodyRequire');
 const authenticate = require('../middleware/authentication');
+const getAggregationPipeline = require('../utilities/pagination');
+const validatePaginationParams = require('../utilities/validation');
 
 const validateId = () =>
     param('id').custom(async (value) => {
@@ -19,25 +21,52 @@ const validateId = () =>
     });
 exports.validatePostId = validateId;
 
-exports.published_posts_list = asyncHandler(async (req, res, next) => {
-    const posts = await Post.find({ is_published: true })
-        .sort({ createdAt: -1 })
-        .exec();
-
-    res.send(posts);
-});
+exports.published_posts_list = [
+    validatePaginationParams(),
+    validationMiddleware,
+    asyncHandler(async (req, res, next) => {
+        const matchStage = {
+            is_published: true
+        };
+        if (req.body.lastCreatedAt && req.body.lastId) {
+            matchStage.$or = [
+                { createdAt: { $lt: new Date(req.body.lastCreatedAt) } },
+                {
+                    createdAt: { $lt: new Date(req.body.lastCreatedAt) },
+                    _id: { $gt: req.body.lastId }
+                }
+            ];
+        }
+        let posts = await Post.aggregate(
+            getAggregationPipeline(
+                matchStage,
+                { createdAt: -1 },
+                req.query.limit
+            )
+        );
+        posts = posts[0];
+        res.send(posts);
+    })
+];
 
 exports.unpublished_posts_list = [
     authenticate,
+    validatePaginationParams(),
+    validationMiddleware,
     asyncHandler(async (req, res, next) => {
         if (!req.user.is_admin) {
             res.status(401).send(
                 'User is not authorized to perform this action'
             );
         }
-        const posts = await Post.find({ is_published: false })
-            .sort({ createdAt: -1 })
-            .exec();
+        const matchStage = { is_published: false };
+        const posts = await Post.aggregate(
+            getAggregationPipeline(
+                matchStage,
+                { createdAt: -1 },
+                req.query.limit
+            )
+        );
         res.status(200).send(posts);
     })
 ];

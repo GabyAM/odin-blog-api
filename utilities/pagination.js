@@ -21,7 +21,7 @@ function getAggregationPipeline(matchStage, sortParameters, limit) {
             $addFields: {
                 metadata: {
                     count: { $size: '$results' },
-                    lastElement: {
+                    nextPageParams: {
                         $cond: {
                             if: { $eq: [{ $size: '$results' }, limit] },
                             then: {
