@@ -37,12 +37,12 @@ exports.published_posts_list = [
                 }
             ];
         }
+        const sortStage = {
+            createdAt: -1,
+            _id: 1
+        };
         let posts = await Post.aggregate(
-            getAggregationPipeline(
-                matchStage,
-                { createdAt: -1 },
-                req.query.limit
-            )
+            getAggregationPipeline(req.query.limit, matchStage, sortStage)
         );
         posts = posts[0];
         res.send(posts);
@@ -60,12 +60,12 @@ exports.unpublished_posts_list = [
             );
         }
         const matchStage = { is_published: false };
+        const sortStage = {
+            createdAt: -1,
+            _id: 1
+        };
         const posts = await Post.aggregate(
-            getAggregationPipeline(
-                matchStage,
-                { createdAt: -1 },
-                req.query.limit
-            )
+            getAggregationPipeline(req.query.limit, matchStage, sortStage)
         );
         res.status(200).send(posts);
     })

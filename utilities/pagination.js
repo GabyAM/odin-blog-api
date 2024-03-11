@@ -1,9 +1,4 @@
-function getAggregationPipeline(matchStage, sortParameters, limit) {
-    const sortStage = {
-        _id: 1,
-        ...sortParameters
-    };
-
+function getAggregationPipeline(limit, matchStage, sortStage) {
     return [
         {
             $match: matchStage
