@@ -1,4 +1,9 @@
-function getAggregationPipeline(limit, matchStage, sortStage) {
+function getAggregationPipeline(
+    limit,
+    matchStage,
+    sortStage,
+    resultsProjection = []
+) {
     return [
         {
             $match: matchStage
@@ -9,7 +14,7 @@ function getAggregationPipeline(limit, matchStage, sortStage) {
         {
             $facet: {
                 metadata: [{ $count: 'count' }],
-                results: [{ $limit: limit }]
+                results: [{ $limit: limit }, ...resultsProjection]
             }
         },
         {

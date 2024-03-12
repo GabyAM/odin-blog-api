@@ -6,6 +6,8 @@ const { default: mongoose } = require('mongoose');
 const validationMiddleware = require('../middleware/validation');
 const { validatePostId } = require('./post.js');
 const authenticate = require('../middleware/authentication.js');
+const getAggregationPipeline = require('../utilities/pagination.js');
+const validatePaginationParams = require('../utilities/validation.js');
 
 const validateId = () =>
     param('id').custom(async (value) => {
@@ -138,35 +140,101 @@ exports.post_comment_count = [
 
 exports.post_comments = [
     validatePostId(),
+    validatePaginationParams(),
     validationMiddleware,
     asyncHandler(async (req, res, next) => {
-        const comments = await Comment.find(
+        const matchStage = {
+            post: new mongoose.Types.ObjectId(req.params.id),
+            parent_comment: null
+        };
+        const sortStage = {
+            createdAt: -1,
+            _id: 1
+        };
+        const resultsProjection = [
             {
-                post: req.params.id,
-                parent_comment: null
-            },
-            'user text comments createdAt'
-        )
-            .populate({
-                path: 'user',
-                select: 'name email is_admin'
-            })
-            .populate({
-                path: 'comments',
-                select: 'user text comments createdAt',
-                populate: [
-                    {
-                        path: 'comments',
-                        select: 'user text createdAt comments url',
-                        populate: {
-                            path: 'user',
-                            select: 'name email is_admin'
+                $lookup: {
+                    from: 'users',
+                    localField: 'user',
+                    foreignField: '_id',
+                    as: 'user',
+                    pipeline: [
+                        {
+                            $project: {
+                                _id: 1,
+                                name: 1,
+                                email: 1,
+                                is_admin: 1
+                            }
                         }
-                    },
-                    { path: 'user', select: 'name email is_admin' }
-                ]
-            })
-            .exec();
+                    ]
+                }
+            },
+            {
+                $lookup: {
+                    from: 'comments',
+                    localField: 'comments',
+                    foreignField: '_id',
+                    as: 'comments',
+                    pipeline: [
+                        {
+                            $lookup: {
+                                from: 'users',
+                                localField: 'user',
+                                foreignField: '_id',
+                                as: 'user',
+                                pipeline: [
+                                    {
+                                        $project: {
+                                            _id: 1,
+                                            name: 1,
+                                            email: 1,
+                                            is_admin: 1
+                                        }
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            $lookup: {
+                                from: 'comments',
+                                localField: 'comments',
+                                foreignField: '_id',
+                                as: 'comments',
+                                pipeline: [
+                                    {
+                                        $lookup: {
+                                            from: 'users',
+                                            localField: 'user',
+                                            foreignField: '_id',
+                                            as: 'user',
+                                            pipeline: [
+                                                {
+                                                    $project: {
+                                                        _id: 1,
+                                                        name: 1,
+                                                        email: 1,
+                                                        is_admin: 1
+                                                    }
+                                                }
+                                            ]
+                                        }
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                }
+            }
+        ];
+        const comments = await Comment.aggregate(
+            getAggregationPipeline(
+                req.query.limit,
+                matchStage,
+                sortStage,
+                resultsProjection
+            )
+        );
 
         res.send(comments);
     })
