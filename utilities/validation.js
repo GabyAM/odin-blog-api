@@ -2,13 +2,13 @@ const { body, query, params } = require('express-validator');
 const { default: mongoose } = require('mongoose');
 
 const validatePaginationParams = () => [
-    body('lastCreatedAt')
+    query('lastCreatedAt')
         .optional({ values: 'falsy' })
         .isISO8601()
         .toDate()
         .withMessage('lastCreatedAt must be a date')
         .escape(),
-    body('lastId')
+    query('lastId')
         .optional({ values: 'falsy' })
         .custom(async (value) => {
             if (!mongoose.Types.ObjectId.isValid(value)) {

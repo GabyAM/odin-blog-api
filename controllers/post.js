@@ -28,12 +28,12 @@ exports.published_posts_list = [
         const matchStage = {
             is_published: true
         };
-        if (req.body.lastCreatedAt && req.body.lastId) {
+        if (req.query.lastCreatedAt && req.query.lastId) {
             matchStage.$or = [
-                { createdAt: { $lt: new Date(req.body.lastCreatedAt) } },
+                { createdAt: { $lt: new Date(req.query.lastCreatedAt) } },
                 {
-                    createdAt: { $lt: new Date(req.body.lastCreatedAt) },
-                    _id: { $gt: req.body.lastId }
+                    createdAt: { $lt: new Date(req.query.lastCreatedAt) },
+                    _id: { $gt: req.query.lastId }
                 }
             ];
         }
