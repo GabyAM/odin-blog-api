@@ -144,14 +144,14 @@ exports.post_comments = [
     validationMiddleware,
     asyncHandler(async (req, res, next) => {
         const matchStage = {
-            post: new mongoose.Types.ObjectId(req.params.id),
-            parent_comment: null
+            post: new mongoose.Types.ObjectId(req.params.id)
         };
         const sortStage = {
             createdAt: -1,
             _id: 1
         };
         const resultsProjection = [
+            { $match: { parent_comment: null } },
             {
                 $lookup: {
                     from: 'users',

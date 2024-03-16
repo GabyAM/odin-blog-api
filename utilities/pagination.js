@@ -21,7 +21,12 @@ function getAggregationPipeline(
             $addFields: {
                 metadata: {
                     $mergeObjects: [
-                        { $arrayElemAt: ['$metadata', 0] },
+                        {
+                            $ifNull: [
+                                { $arrayElemAt: ['$metadata', 0] },
+                                { count: 0 }
+                            ]
+                        },
                         {
                             nextPageParams: {
                                 $cond: {
