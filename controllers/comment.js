@@ -146,6 +146,15 @@ exports.post_comments = [
         const matchStage = {
             post: new mongoose.Types.ObjectId(req.params.id)
         };
+        if (req.query.lastCreatedAt && req.query.lastId) {
+            matchStage.$or = [
+                { createdAt: { $lt: new Date(req.query.lastCreatedAt) } },
+                {
+                    createdAt: { $lt: new Date(req.query.lastCreatedAt) },
+                    _id: { $gt: req.query.lastId }
+                }
+            ];
+        }
         const sortStage = {
             createdAt: -1,
             _id: 1
@@ -170,6 +179,7 @@ exports.post_comments = [
                     ]
                 }
             },
+            { $unwind: '$user' },
             {
                 $lookup: {
                     from: 'comments',
@@ -195,6 +205,7 @@ exports.post_comments = [
                                 ]
                             }
                         },
+                        { $unwind: '$user' },
                         {
                             $lookup: {
                                 from: 'comments',
@@ -219,7 +230,8 @@ exports.post_comments = [
                                                 }
                                             ]
                                         }
-                                    }
+                                    },
+                                    { $unwind: '$user' }
                                 ]
                             }
                         }
@@ -227,7 +239,7 @@ exports.post_comments = [
                 }
             }
         ];
-        const comments = await Comment.aggregate(
+        let comments = await Comment.aggregate(
             getAggregationPipeline(
                 req.query.limit,
                 matchStage,
@@ -235,6 +247,8 @@ exports.post_comments = [
                 resultsProjection
             )
         );
+
+        comments = comments[0];
 
         res.send(comments);
     })
