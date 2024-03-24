@@ -5,7 +5,8 @@ const userSchema = new Schema({
     name: String,
     email: String,
     password: String,
-    is_admin: Boolean
+    is_admin: Boolean,
+    image: { type: String, default: '/images/profile.png' }
 });
 
 const User = mongoose.model('User', userSchema);

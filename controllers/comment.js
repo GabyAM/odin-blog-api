@@ -173,7 +173,8 @@ exports.post_comments = [
                                 _id: 1,
                                 name: 1,
                                 email: 1,
-                                is_admin: 1
+                                is_admin: 1,
+                                image: 1
                             }
                         }
                     ]
@@ -199,7 +200,8 @@ exports.post_comments = [
                                             _id: 1,
                                             name: 1,
                                             email: 1,
-                                            is_admin: 1
+                                            is_admin: 1,
+                                            image: 1
                                         }
                                     }
                                 ]
@@ -225,7 +227,8 @@ exports.post_comments = [
                                                         _id: 1,
                                                         name: 1,
                                                         email: 1,
-                                                        is_admin: 1
+                                                        is_admin: 1,
+                                                        image: 1
                                                     }
                                                 }
                                             ]

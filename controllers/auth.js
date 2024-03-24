@@ -20,7 +20,8 @@ exports.refresh = (req, res, next) => {
                 {
                     id: decodedRefreshToken.id,
                     name: decodedRefreshToken.name,
-                    email: decodedRefreshToken.email
+                    email: decodedRefreshToken.email,
+                    image: decodedRefreshToken.image
                 },
                 'tokensecretchangelater',
                 { expiresIn: '5m' }
@@ -70,12 +71,22 @@ exports.login = [
                 });
             }
             const accessToken = jwt.sign(
-                { id: user._id, name: user.name, email: user.email },
+                {
+                    id: user._id,
+                    name: user.name,
+                    email: user.email,
+                    image: user.image
+                },
                 'tokensecretchangelater',
                 { expiresIn: '5m' }
             );
             const refreshToken = jwt.sign(
-                { id: user._id, name: user.name, email: user.email },
+                {
+                    id: user._id,
+                    name: user.name,
+                    email: user.email,
+                    image: user.image
+                },
                 'tokensecretchangelater',
                 { expiresIn: '14 days' }
             );

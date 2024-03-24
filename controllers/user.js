@@ -7,7 +7,7 @@ const validationMiddleware = require('../middleware/validation');
 const requireBody = require('../middleware/bodyRequire');
 
 exports.users_list = asyncHandler(async (req, res, next) => {
-    const users = await User.find({}, 'name email is_admin').exec();
+    const users = await User.find({}, 'name email is_admin image').exec();
     res.send(users);
 });
 
@@ -90,7 +90,10 @@ exports.user_detail = [
     }),
     validationMiddleware,
     asyncHandler(async (req, res, next) => {
-        const user = await User.findById(req.params.id, 'name email is_admin');
+        const user = await User.findById(
+            req.params.id,
+            'name email is_admin image'
+        );
         res.send(user);
     })
 ];
