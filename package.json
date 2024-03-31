@@ -26,7 +26,8 @@
         "nodemon": "^3.0.3",
         "passport": "^0.7.0",
         "passport-jwt": "^4.0.1",
-        "prettier": "^3.2.5"
+        "prettier": "^3.2.5",
+        "sanitize-html": "^2.13.0"
     },
     "devDependencies": {
         "eslint": "^8.56.0",
