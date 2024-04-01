@@ -8,6 +8,7 @@ const requireBody = require('../middleware/bodyRequire');
 const authenticate = require('../middleware/authentication');
 const getAggregationPipeline = require('../utilities/pagination');
 const validatePaginationParams = require('../utilities/validation');
+const sanitizeHtml = require('sanitize-html');
 
 const validateId = () =>
     param('id').custom(async (value) => {
@@ -122,7 +123,13 @@ exports.post_update_post = [
     validationMiddleware,
     body('title', 'title is required').exists().escape(),
     body('summary', 'summary is required').exists().escape(),
-    body('text', 'text is required').exists().escape(),
+    body('text', 'text is required')
+        .exists()
+        .customSanitizer((value) => {
+            return sanitizeHtml(value, {
+                allowedTags: sanitizeHtml.defaults.allowedTags.concat(['img'])
+            });
+        }),
     validationMiddleware,
     authenticate,
     asyncHandler(async (req, res, next) => {
@@ -132,15 +139,14 @@ exports.post_update_post = [
             );
         }
 
-        const post = new Post({
-            _id: req.params.id,
-            title: req.body.title,
-            author: req.user._id,
-            summary: req.body.summary,
-            text: req.body.text
-        });
+        const post = await Post.findById(req.params.id).exec();
+        post._id = req.params.id;
+        post.title = req.body.title;
+        post.summary = req.body.summary;
+        post.text = req.body.text;
 
-        await Post.findByIdAndUpdate(post._id, post, {});
+        await post.save();
+
         res.status(200).send({
             message: 'Post updated',
             post
