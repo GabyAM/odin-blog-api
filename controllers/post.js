@@ -61,13 +61,23 @@ exports.unpublished_posts_list = [
             );
         }
         const matchStage = { is_published: false };
+        if (req.query.lastCreatedAt && req.query.lastId) {
+            matchStage.$or = [
+                { createdAt: { $lt: new Date(req.query.lastCreatedAt) } },
+                {
+                    createdAt: { $lt: new Date(req.query.lastCreatedAt) },
+                    _id: { $gt: req.query.lastId }
+                }
+            ];
+        }
         const sortStage = {
             createdAt: -1,
             _id: 1
         };
-        const posts = await Post.aggregate(
+        let posts = await Post.aggregate(
             getAggregationPipeline(req.query.limit, matchStage, sortStage)
         );
+        posts = posts[0];
         res.status(200).send(posts);
     })
 ];
