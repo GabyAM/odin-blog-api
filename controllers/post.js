@@ -17,6 +17,7 @@ const {
 const sanitizeHtml = require('sanitize-html');
 const uploadImage = require('../middleware/fileUpload');
 const parseFormData = require('../middleware/parseFormData');
+const fs = require('fs');
 
 const validateId = () =>
     param('id').custom(async (value) => {
@@ -141,29 +142,41 @@ exports.post_update_post = [
     requireBody,
     validateId(),
     validationMiddleware,
-    body('title', 'title is required').exists().escape(),
-    body('summary', 'summary is required').exists().escape(),
-    body('text', 'text is required')
-        .exists()
+    authenticateAdmin,
+    parseFormData,
+    body('title').optional({ values: 'falsy' }).escape(),
+    body('summary').optional({ values: 'falsy' }).escape(),
+    body('text')
+        .optional({ values: 'falsy' })
         .customSanitizer((value) => {
             return sanitizeHtml(value, {
                 allowedTags: sanitizeHtml.defaults.allowedTags.concat(['img'])
             });
         }),
+    validateImage(),
     validationMiddleware,
-    authenticate,
+    uploadImage,
     asyncHandler(async (req, res, next) => {
-        if (!req.user.is_admin) {
-            res.status(401).send(
-                'User is not authorized to perform this action'
-            );
+        const { title, summary, text } = req.body;
+        if (!(title || summary || text || req.imageUrl)) {
+            return res
+                .status(400)
+                .send('Post not updated, no new fields were provided');
         }
 
         const post = await Post.findById(req.params.id).exec();
         post._id = req.params.id;
-        post.title = req.body.title;
-        post.summary = req.body.summary;
-        post.text = req.body.text;
+        if (title) post.title = title;
+        if (summary) post.summary = req.body.summary;
+        if (text) post.text = req.body.text;
+        if (req.imageUrl) {
+            if (post.image !== '/images/post_thumbnail_placeholder.png') {
+                fs.unlink(`./public${post.image}`, (err) => {
+                    if (err) throw new Error(err);
+                });
+            }
+            post.image = req.imageUrl;
+        }
 
         await post.save();
 
