@@ -10,7 +10,9 @@ const {
     authenticateAdmin
 } = require('../middleware/authentication');
 const getAggregationPipeline = require('../utilities/pagination');
-const validatePaginationParams = require('../utilities/validation');
+const {
+    validatePaginationParams,
+} = require('../utilities/validation');
 const sanitizeHtml = require('sanitize-html');
 
 const validateId = () =>

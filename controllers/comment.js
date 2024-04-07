@@ -10,7 +10,7 @@ const {
     authenticateAdmin
 } = require('../middleware/authentication.js');
 const getAggregationPipeline = require('../utilities/pagination.js');
-const validatePaginationParams = require('../utilities/validation.js');
+const { validatePaginationParams } = require('../utilities/validation.js');
 
 const validateId = () =>
     param('id').custom(async (value) => {
