@@ -9,6 +9,7 @@ router.get('/:id', post_controller.post_detail);
 
 router.post('/:id/update', post_controller.post_update_post);
 router.post('/:id/publish', post_controller.post_publish_post);
+router.post('/:id/unpublish', post_controller.post_unpublish_post);
 router.get('/:id/comments', comment_controller.post_comments);
 router.post('/:id/comments', comment_controller.post_comment_create_post);
 router.get('/:id/comments/count', comment_controller.post_comment_count);

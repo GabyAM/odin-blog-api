@@ -194,7 +194,29 @@ exports.post_publish_post = [
     asyncHandler(async (req, res, next) => {
         try {
             const post = await Post.findById(req.params.id).exec();
+            if (post.is_published) {
+                return res.status(409).send('Post is already published');
+            }
             post.is_published = true;
+            await post.save();
+            res.send(post);
+        } catch (e) {
+            res.status(400).send({ errors: mapErrors(e) });
+        }
+    })
+];
+
+exports.post_unpublish_post = [
+    validateId(),
+    validationMiddleware,
+    authenticate,
+    asyncHandler(async (req, res, next) => {
+        try {
+            const post = await Post.findById(req.params.id).exec();
+            if (!post.is_published) {
+                return res.status(409).send('Post is already unpublished');
+            }
+            post.is_published = false;
             await post.save();
             res.send(post);
         } catch (e) {
