@@ -6,6 +6,10 @@ const postSchema = new Schema(
         author: { type: Schema.Types.ObjectId, ref: 'User', required: true },
         title: { type: String },
         summary: { type: String },
+        image: {
+            type: String,
+            default: '/images/post_thumbnail_placeholder.png'
+        },
         text: { type: String },
         comment_count: { type: Number, default: 0 },
         is_published: { type: Boolean, default: false }
