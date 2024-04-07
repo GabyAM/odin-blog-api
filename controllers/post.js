@@ -12,8 +12,11 @@ const {
 const getAggregationPipeline = require('../utilities/pagination');
 const {
     validatePaginationParams,
+    validateImage
 } = require('../utilities/validation');
 const sanitizeHtml = require('sanitize-html');
+const uploadImage = require('../middleware/fileUpload');
+const parseFormData = require('../middleware/parseFormData');
 
 const validateId = () =>
     param('id').custom(async (value) => {
@@ -109,18 +112,20 @@ exports.post_detail = [
 ];
 
 exports.post_create_post = [
-    authenticate,
+    authenticateAdmin,
+    parseFormData,
+    body('title').optional({ values: 'falsy' }).escape(),
+    body('summary').optional({ values: 'falsy' }).escape(),
+    body('text').optional({ values: 'falsy' }).escape(),
+    validateImage(),
+    validationMiddleware,
+    uploadImage,
     asyncHandler(async (req, res, next) => {
-        if (!req.user.is_admin) {
-            res.status(401).send(
-                'User is not authorized to perform this action'
-            );
-        }
-
         const post = new Post({
             author: req.user._id,
             title: req.body.title || undefined,
             summary: req.body.summary || undefined,
+            image: req.imageUrl || undefined,
             text: req.body.text || undefined
         });
 
