@@ -5,7 +5,10 @@ const Post = require('../models/post');
 const { default: mongoose } = require('mongoose');
 const validationMiddleware = require('../middleware/validation');
 const { validatePostId } = require('./post.js');
-const authenticate = require('../middleware/authentication.js');
+const {
+    authenticate,
+    authenticateAdmin
+} = require('../middleware/authentication.js');
 const getAggregationPipeline = require('../utilities/pagination.js');
 const validatePaginationParams = require('../utilities/validation.js');
 

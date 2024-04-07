@@ -5,7 +5,10 @@ const { default: mongoose } = require('mongoose');
 const validationMiddleware = require('../middleware/validation');
 const mapErrors = require('../mappers/error');
 const requireBody = require('../middleware/bodyRequire');
-const authenticate = require('../middleware/authentication');
+const {
+    authenticate,
+    authenticateAdmin
+} = require('../middleware/authentication');
 const getAggregationPipeline = require('../utilities/pagination');
 const validatePaginationParams = require('../utilities/validation');
 const sanitizeHtml = require('sanitize-html');
