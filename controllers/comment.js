@@ -23,10 +23,78 @@ const validateId = () =>
         }
     });
 
-exports.comments_list = asyncHandler(async (req, res, next) => {
-    const comments = await Comment.find({}).exec();
-    res.send(comments);
-});
+exports.comments_list = [
+    validatePaginationParams(),
+    validationMiddleware,
+    asyncHandler(async (req, res, next) => {
+        const matchStage = {};
+        if (req.query.lastCreatedAt && req.query.lastId) {
+            matchStage.$or = [
+                { createdAt: { $lt: new Date(req.query.lastCreatedAt) } },
+                {
+                    createdAt: { $lt: new Date(req.query.lastCreatedAt) },
+                    _id: { $gt: req.query.lastId }
+                }
+            ];
+        }
+        const sortStage = {
+            createdAt: -1,
+            _id: 1
+        };
+        const resultsProjection = [
+            {
+                $lookup: {
+                    from: 'users',
+                    localField: 'user',
+                    foreignField: '_id',
+                    as: 'user',
+                    pipeline: [
+                        {
+                            $project: {
+                                _id: 1,
+                                name: 1,
+                                email: 1,
+                                is_admin: 1,
+                                image: 1,
+                                parent_comment: 1,
+                                comments: 1
+                            }
+                        }
+                    ]
+                }
+            },
+            {
+                $lookup: {
+                    from: 'posts',
+                    localField: 'post',
+                    foreignField: '_id',
+                    as: 'post',
+                    pipeline: [
+                        {
+                            $project: {
+                                title: 1
+                            }
+                        }
+                    ]
+                }
+            },
+            { $unwind: '$user' },
+            { $unwind: '$post' }
+        ];
+        let comments = await Comment.aggregate(
+            getAggregationPipeline(
+                req.query.limit,
+                matchStage,
+                sortStage,
+                resultsProjection
+            )
+        );
+
+        comments = comments[0];
+
+        res.send(comments);
+    })
+];
 
 exports.comment_detail = [
     validateId(),
