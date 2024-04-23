@@ -198,6 +198,55 @@ exports.comment_update_post = [
     })
 ];
 
+exports.comment_delete_post = [
+    validateId(),
+    validationMiddleware,
+    authenticate,
+    asyncHandler(async (req, res, next) => {
+        const comment = await Comment.findById(req.params.id).populate('user');
+
+        if (!req.user.is_admin && req.user._id !== comment.user._id) {
+            res.status(401).send(
+                'User is not authorized to perform this action'
+            );
+        } else {
+            async function deleteCommentAndReplies(commentId, session) {
+                const comment =
+                    await Comment.findById(commentId).session(session);
+                comment.comments.forEach(async (reply) => {
+                    await deleteCommentAndReplies(reply, session);
+                });
+
+                await Comment.findByIdAndDelete(commentId).session(session);
+            }
+
+            const db = mongoose.connection;
+            const session = await db.startSession();
+            try {
+                await session.startTransaction();
+
+                comment.comments.forEach(async (replyId) => {
+                    await deleteCommentAndReplies(replyId, session);
+                });
+                await Comment.findByIdAndDelete(comment._id).session(session);
+
+                await session.commitTransaction();
+                session.endSession();
+            } catch (e) {
+                await session.abortTransaction();
+                session.endSession();
+                return res.status(500).send({
+                    message: "Internal server error: couldn't delete comment"
+                });
+            }
+
+            res.status(200).send({
+                message: 'Comment deleted successfully'
+            });
+        }
+    })
+];
+
 exports.post_comment_count = [
     validatePostId(),
     validationMiddleware,
