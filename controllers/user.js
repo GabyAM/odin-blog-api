@@ -1,6 +1,6 @@
 const asyncHandler = require('express-async-handler');
 const User = require('../models/user');
-const { body, param } = require('express-validator');
+const { body, param, query } = require('express-validator');
 const bcrypt = require('bcryptjs');
 const { default: mongoose } = require('mongoose');
 const validationMiddleware = require('../middleware/validation');
@@ -9,13 +9,30 @@ const { validatePaginationParams } = require('../utilities/validation');
 const getAggregationPipeline = require('../utilities/pagination');
 const { authenticateAdmin } = require('../middleware/authentication');
 
+const validateId = () =>
+    param('id').custom(async (value) => {
+        if (!mongoose.Types.ObjectId.isValid(value)) {
+            throw new Error('invalid user id');
+        }
+        const user = await User.findById(value).exec();
+        if (!user) {
+            throw new Error('user not found');
+        }
     });
 
 exports.users_list = [
     validatePaginationParams(),
     validationMiddleware,
+    query('is_admin', 'The is_admin parameter must be a boolean value')
+        .optional()
+        .isIn(['true', 'false'])
+        .toBoolean(),
+    validationMiddleware,
     asyncHandler(async (req, res, next) => {
         const matchStage = {};
+        if (req.query.is_admin !== undefined) {
+            matchStage.is_admin = req.query.is_admin;
+        }
         if (req.query.lastCreatedAt && req.query.lastId) {
             matchStage.$or = [
                 { createdAt: { $lt: new Date(req.query.lastCreatedAt) } },
