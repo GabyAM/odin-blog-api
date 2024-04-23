@@ -5,11 +5,55 @@ const bcrypt = require('bcryptjs');
 const { default: mongoose } = require('mongoose');
 const validationMiddleware = require('../middleware/validation');
 const requireBody = require('../middleware/bodyRequire');
+const { validatePaginationParams } = require('../utilities/validation');
+const getAggregationPipeline = require('../utilities/pagination');
+const { authenticateAdmin } = require('../middleware/authentication');
 
-exports.users_list = asyncHandler(async (req, res, next) => {
-    const users = await User.find({}, 'name email is_admin image').exec();
-    res.send(users);
-});
+    });
+
+exports.users_list = [
+    validatePaginationParams(),
+    validationMiddleware,
+    asyncHandler(async (req, res, next) => {
+        const matchStage = {};
+        if (req.query.lastCreatedAt && req.query.lastId) {
+            matchStage.$or = [
+                { createdAt: { $lt: new Date(req.query.lastCreatedAt) } },
+                {
+                    createdAt: { $lt: new Date(req.query.lastCreatedAt) },
+                    _id: { $gt: req.query.lastId }
+                }
+            ];
+        }
+        const sortStage = {
+            createdAt: -1,
+            _id: 1
+        };
+
+        const usersProjection = [
+            {
+                $project: {
+                    _id: 1,
+                    name: 1,
+                    email: 1,
+                    is_admin: 1,
+                    image: 1
+                }
+            }
+        ];
+
+        let users = await User.aggregate(
+            getAggregationPipeline(
+                req.query.limit,
+                matchStage,
+                sortStage,
+                usersProjection
+            )
+        );
+        users = users[0];
+        res.send(users);
+    })
+];
 
 exports.user_create = [
     requireBody,
