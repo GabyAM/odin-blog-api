@@ -187,6 +187,32 @@ exports.post_update_post = [
     })
 ];
 
+exports.post_delete_post = [
+    validateId(),
+    validationMiddleware,
+    authenticateAdmin,
+    asyncHandler(async (req, res, next) => {
+        const db = mongoose.connection;
+        const session = await db.startSession();
+        try {
+            await session.startTransaction();
+
+            await Post.findByIdAndDelete(req.params.id).session(session);
+            await Comment.deleteMany({ post: req.params.id }).session(session);
+            await session.commitTransaction();
+            session.endSession();
+        } catch (e) {
+            console.log(e);
+            await session.abortTransaction();
+            session.endSession();
+            return res.status(500).send({
+                message: "Internal server error: couldn't delete the post"
+            });
+        }
+        res.status(200).send({ message: 'Post deleted successfully' });
+    })
+];
+
 exports.post_publish_post = [
     validateId(),
     validationMiddleware,
