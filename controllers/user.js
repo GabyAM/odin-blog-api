@@ -196,3 +196,37 @@ exports.user_demote_post = [
     })
 ];
 
+exports.user_ban_post = [
+    validateId(),
+    validationMiddleware,
+    authenticateAdmin,
+    asyncHandler(async (req, res, next) => {
+        const user = await User.findById(req.params.id);
+        if (user.is_banned) {
+            res.status(409).send({
+                message: 'User cannot be banned since is already banned'
+            });
+        }
+        user.is_admin = false;
+        user.is_banned = true;
+        await user.save();
+        res.send({ message: 'User banned successfully' });
+    })
+];
+
+exports.user_unban_post = [
+    validateId(),
+    validationMiddleware,
+    authenticateAdmin,
+    asyncHandler(async (req, res, next) => {
+        const user = await User.findById(req.params.id);
+        if (!user.is_banned) {
+            res.status(409).send({
+                message: 'User cannot be unbanned since is not banned'
+            });
+        }
+        user.is_banned = false;
+        await user.save();
+        res.send({ message: 'User banned successfully' });
+    })
+];
