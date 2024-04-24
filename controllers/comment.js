@@ -55,9 +55,8 @@ exports.comments_list = [
                                 name: 1,
                                 email: 1,
                                 is_admin: 1,
-                                image: 1,
-                                parent_comment: 1,
-                                comments: 1
+                                is_banned: 1,
+                                image: 1
                             }
                         }
                     ]
@@ -78,7 +77,8 @@ exports.comments_list = [
                     ]
                 }
             },
-            { $unwind: '$user' },
+            { $unwind: { path: '$user', preserveNullAndEmptyArrays: true } },
+            { $addFields: { user: { $ifNull: ['$user', null] } } },
             { $unwind: '$post' }
         ];
         let comments = await Comment.aggregate(
@@ -115,10 +115,13 @@ exports.comment_detail = [
                             select: 'user text createdAt comments url',
                             populate: {
                                 path: 'user',
-                                select: 'name email is_admin'
+                                select: 'name email is_admin is_banned image'
                             }
                         },
-                        { path: 'user', select: 'name email is_admin' }
+                        {
+                            path: 'user',
+                            select: 'name email is_admin is_banned image'
+                        }
                     ]
                 })
                 .exec();
@@ -294,13 +297,15 @@ exports.post_comments = [
                                 name: 1,
                                 email: 1,
                                 is_admin: 1,
+                                is_banned: 1,
                                 image: 1
                             }
                         }
                     ]
                 }
             },
-            { $unwind: '$user' },
+            { $unwind: { path: '$user', preserveNullAndEmptyArrays: true } },
+            { $addFields: { user: { $ifNull: ['$user', null] } } },
             {
                 $lookup: {
                     from: 'comments',
@@ -321,13 +326,20 @@ exports.post_comments = [
                                             name: 1,
                                             email: 1,
                                             is_admin: 1,
+                                            is_banned: 1,
                                             image: 1
                                         }
                                     }
                                 ]
                             }
                         },
-                        { $unwind: '$user' },
+                        {
+                            $unwind: {
+                                path: '$user',
+                                preserveNullAndEmptyArrays: true
+                            }
+                        },
+                        { $addFields: { user: { $ifNull: ['$user', null] } } },
                         {
                             $lookup: {
                                 from: 'comments',
@@ -348,13 +360,24 @@ exports.post_comments = [
                                                         name: 1,
                                                         email: 1,
                                                         is_admin: 1,
+                                                        is_banned: 1,
                                                         image: 1
                                                     }
                                                 }
                                             ]
                                         }
                                     },
-                                    { $unwind: '$user' }
+                                    {
+                                        $unwind: {
+                                            path: '$user',
+                                            preserveNullAndEmptyArrays: true
+                                        }
+                                    },
+                                    {
+                                        $addFields: {
+                                            user: { $ifNull: ['$user', null] }
+                                        }
+                                    }
                                 ]
                             }
                         }
