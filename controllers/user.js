@@ -7,7 +7,10 @@ const validationMiddleware = require('../middleware/validation');
 const requireBody = require('../middleware/bodyRequire');
 const { validatePaginationParams } = require('../utilities/validation');
 const getAggregationPipeline = require('../utilities/pagination');
-const { authenticateAdmin } = require('../middleware/authentication');
+const {
+    authenticate,
+    authenticateAdmin
+} = require('../middleware/authentication');
 
 const validateId = () =>
     param('id').custom(async (value) => {
@@ -158,3 +161,38 @@ exports.user_detail = [
         res.send(user);
     })
 ];
+exports.user_promote_post = [
+    validateId(),
+    validationMiddleware,
+    authenticateAdmin,
+    asyncHandler(async (req, res, next) => {
+        const user = await User.findById(req.params.id);
+        if (user.is_admin) {
+            res.status(409).send({
+                message: 'User cannot be promoted since its already an admin'
+            });
+        }
+        user.is_admin = true;
+        await user.save();
+        res.send({ message: 'User promoted successfully' });
+    })
+];
+
+exports.user_demote_post = [
+    validateId(),
+    validationMiddleware,
+    authenticateAdmin,
+    asyncHandler(async (req, res, next) => {
+        const user = await User.findById(req.params.id);
+        if (!user.is_admin) {
+            res.status(409).send({
+                message:
+                    'User cannot be demoted since its already a regular user'
+            });
+        }
+        user.is_admin = false;
+        await user.save();
+        res.send({ message: 'User promoted successfully' });
+    })
+];
+

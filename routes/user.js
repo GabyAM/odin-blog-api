@@ -9,4 +9,7 @@ router.get('/:id', user_controller.user_detail);
 
 router.get('/:id/posts', post_controller.user_posts);
 
+router.post('/:id/promote', user_controller.user_promote_post);
+router.post('/:id/demote', user_controller.user_demote_post);
+
 module.exports = router;
