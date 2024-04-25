@@ -11,6 +11,8 @@ const {
     authenticate,
     authenticateAdmin
 } = require('../middleware/authentication');
+const Post = require('../models/post');
+const Comment = require('../models/comment');
 
 const validateId = () =>
     param('id').custom(async (value) => {
@@ -161,6 +163,51 @@ exports.user_detail = [
         res.send(user);
     })
 ];
+
+exports.user_delete_post = [
+    validateId(),
+    validationMiddleware,
+    authenticate,
+    asyncHandler(async (req, res, next) => {
+        if (!req.user.is_admin && req.user._id !== req.params.id) {
+            res.status(401).send({
+                message:
+                    'Unauthorized to delete this user. Only an admin or the user itself can do it.'
+            });
+        }
+        const user = await User.findById(req.params.id);
+        const db = mongoose.connection;
+        const session = await db.startSession();
+        try {
+            await session.startTransaction();
+
+            const posts = await Post.find(
+                { author: user._id },
+                { _id: 1 }
+            ).session(session);
+            posts.forEach(async (post) => {
+                await Comment.deleteMany({ post: post._id }).session(session);
+                await Post.findByIdAndDelete(post._id).session(session);
+            });
+            await Comment.updateMany(
+                { user: user._id },
+                { $set: { user: null, text: '' } }
+            ).session(session);
+            await User.findByIdAndDelete(req.params.id);
+
+            await session.commitTransaction();
+        } catch (e) {
+            console.log(e);
+            await session.abortTransaction();
+            session.endSession();
+            return res.status(500).send({
+                message: "Internal server error: couldn't delete the user"
+            });
+        }
+        res.send({ message: 'User deleted successfully' });
+    })
+];
+
 exports.user_promote_post = [
     validateId(),
     validationMiddleware,

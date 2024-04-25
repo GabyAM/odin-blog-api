@@ -15,4 +15,6 @@ router.post('/:id/demote', user_controller.user_demote_post);
 router.post('/:id/ban', user_controller.user_ban_post);
 router.post('/:id/unban', user_controller.user_unban_post);
 
+router.post('/:id/delete', user_controller.user_delete_post);
+
 module.exports = router;
