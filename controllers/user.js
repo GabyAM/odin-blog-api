@@ -165,7 +165,8 @@ exports.user_create = [
                     name: req.body.name,
                     email: req.body.email,
                     password: hashedPassword,
-                    is_admin: false
+                    is_admin: false,
+                    is_banned: false
                 });
 
                 await user.save();
@@ -178,20 +179,12 @@ exports.user_create = [
 ];
 
 exports.user_detail = [
-    param('id').custom(async (value) => {
-        if (!mongoose.Types.ObjectId.isValid(value)) {
-            throw new Error('invalid user id');
-        }
-        const post = await User.findById(value).exec();
-        if (!post) {
-            throw new Error('user not found');
-        }
-    }),
+    validateId(),
     validationMiddleware,
     asyncHandler(async (req, res, next) => {
         const user = await User.findById(
             req.params.id,
-            'name email is_admin image'
+            'name email is_admin is_banned image'
         );
         res.send(user);
     })
