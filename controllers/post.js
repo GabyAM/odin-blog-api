@@ -1,6 +1,6 @@
 const asyncHandler = require('express-async-handler');
 const Post = require('../models/post');
-const { body, param } = require('express-validator');
+const { body, param, query } = require('express-validator');
 const { default: mongoose } = require('mongoose');
 const validationMiddleware = require('../middleware/validation');
 const mapErrors = require('../mappers/error');
@@ -31,13 +31,29 @@ const validateId = () =>
     });
 exports.validatePostId = validateId;
 
-exports.published_posts_list = [
+exports.posts_list = [
     validatePaginationParams(),
     validationMiddleware,
+    authenticate,
+    query('is_published', 'The is_published parameter must be a boolean value')
+        .optional()
+        .isIn(['true', 'false'])
+        .toBoolean(),
     asyncHandler(async (req, res, next) => {
-        const matchStage = {
-            is_published: true
-        };
+        const matchStage = {};
+        if (
+            !req.user.is_admin &&
+            (!req.query.is_published || req.query.is_published === true)
+        ) {
+            res.status(401).send(
+                'The user is not authorized to perform this action'
+            );
+        }
+
+
+        if (req.query.is_published !== undefined) {
+            matchStage.is_published = req.query.is_published;
+        }
         if (req.query.lastCreatedAt && req.query.lastId) {
             matchStage.$or = [
                 { createdAt: { $lt: new Date(req.query.lastCreatedAt) } },
@@ -47,47 +63,20 @@ exports.published_posts_list = [
                 }
             ];
         }
+
         const sortStage = {
             createdAt: -1,
             _id: 1
         };
         let posts = await Post.aggregate(
-            getAggregationPipeline(req.query.limit, matchStage, sortStage)
+            getAggregationPipeline(
+                req.query.limit,
+                matchStage,
+                sortStage
+            )
         );
         posts = posts[0];
         res.send(posts);
-    })
-];
-
-exports.unpublished_posts_list = [
-    authenticate,
-    validatePaginationParams(),
-    validationMiddleware,
-    asyncHandler(async (req, res, next) => {
-        if (!req.user.is_admin) {
-            res.status(401).send(
-                'User is not authorized to perform this action'
-            );
-        }
-        const matchStage = { is_published: false };
-        if (req.query.lastCreatedAt && req.query.lastId) {
-            matchStage.$or = [
-                { createdAt: { $lt: new Date(req.query.lastCreatedAt) } },
-                {
-                    createdAt: { $lt: new Date(req.query.lastCreatedAt) },
-                    _id: { $gt: req.query.lastId }
-                }
-            ];
-        }
-        const sortStage = {
-            createdAt: -1,
-            _id: 1
-        };
-        let posts = await Post.aggregate(
-            getAggregationPipeline(req.query.limit, matchStage, sortStage)
-        );
-        posts = posts[0];
-        res.status(200).send(posts);
     })
 ];
 

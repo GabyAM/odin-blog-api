@@ -8,8 +8,7 @@ const auth_controller = require('../controllers/auth');
 const image_controller = require('../controllers/image');
 
 router.get('/users', user_controller.users_list);
-router.get('/published_posts', post_controller.published_posts_list);
-router.get('/unpublished_posts', post_controller.unpublished_posts_list);
+router.get('/posts', post_controller.posts_list);
 router.get('/comments', comment_controller.comments_list);
 
 router.post('/login', auth_controller.login);
