@@ -30,7 +30,17 @@ function getAggregationPipeline(
                         {
                             nextPageParams: {
                                 $cond: {
-                                    if: { $eq: [{ $size: '$results' }, limit] },
+                                    if: {
+                                        $gt: [
+                                            {
+                                                $arrayElemAt: [
+                                                    '$metadata.count',
+                                                    0
+                                                ]
+                                            },
+                                            { $size: '$results' }
+                                        ]
+                                    },
                                     then: {
                                         $let: {
                                             vars: {
