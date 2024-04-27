@@ -27,6 +27,23 @@ exports.comments_list = [
     validatePaginationParams(),
     validationMiddleware,
     asyncHandler(async (req, res, next) => {
+        let searchStage = null;
+        if (req.query.search) {
+            searchStage = {
+                index: 'comments_search',
+                compound: {
+                    should: [
+                        {
+                            autocomplete: {
+                                path: 'text',
+                                query: req.query.search
+                            }
+                        }
+                    ],
+                    minimumShouldMatch: 1
+                }
+            };
+        }
         const matchStage = {};
         if (req.query.lastCreatedAt && req.query.lastId) {
             matchStage.$or = [
@@ -84,6 +101,7 @@ exports.comments_list = [
         let comments = await Comment.aggregate(
             getAggregationPipeline(
                 req.query.limit,
+                searchStage,
                 matchStage,
                 sortStage,
                 resultsProjection
@@ -388,6 +406,7 @@ exports.post_comments = [
         let comments = await Comment.aggregate(
             getAggregationPipeline(
                 req.query.limit,
+                null,
                 matchStage,
                 sortStage,
                 resultsProjection

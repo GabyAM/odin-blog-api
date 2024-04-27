@@ -32,11 +32,42 @@ exports.users_list = [
         .optional()
         .isIn(['true', 'false'])
         .toBoolean(),
+    query('is_banned', 'The is_admin parameter must be a boolean value')
+        .optional()
+        .isIn(['true', 'false'])
+        .toBoolean(),
     validationMiddleware,
     asyncHandler(async (req, res, next) => {
+        let searchStage = null;
+        if (req.query.search) {
+            searchStage = {
+                index: 'users_search',
+                compound: {
+                    should: [
+                        {
+                            autocomplete: {
+                                query: req.query.search,
+                                path: 'name'
+                            }
+                        },
+                        {
+                            autocomplete: {
+                                query: req.query.search,
+                                path: 'email'
+                            }
+                        }
+                    ],
+                    minimumShouldMatch: 1
+                }
+            };
+        }
+
         const matchStage = {};
         if (req.query.is_admin !== undefined) {
             matchStage.is_admin = req.query.is_admin;
+        }
+        if (req.query.is_banned !== undefined) {
+            matchStage.is_banned = req.query.is_banned;
         }
         if (req.query.lastCreatedAt && req.query.lastId) {
             matchStage.$or = [
@@ -59,6 +90,7 @@ exports.users_list = [
                     name: 1,
                     email: 1,
                     is_admin: 1,
+                    is_banned: 1,
                     image: 1
                 }
             }
@@ -67,6 +99,7 @@ exports.users_list = [
         let users = await User.aggregate(
             getAggregationPipeline(
                 req.query.limit,
+                searchStage,
                 matchStage,
                 sortStage,
                 usersProjection

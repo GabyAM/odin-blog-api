@@ -50,6 +50,35 @@ exports.posts_list = [
             );
         }
 
+        let searchStage = null;
+        if (req.query.search) {
+            searchStage = {
+                index: 'posts_search',
+                compound: {
+                    should: [
+                        {
+                            autocomplete: {
+                                query: req.query.search,
+                                path: 'title'
+                            }
+                        },
+                        {
+                            autocomplete: {
+                                query: req.query.search,
+                                path: 'text'
+                            }
+                        },
+                        {
+                            autocomplete: {
+                                query: req.query.search,
+                                path: 'summary'
+                            }
+                        }
+                    ],
+                    minimumShouldMatch: 1
+                }
+            };
+        }
 
         if (req.query.is_published !== undefined) {
             matchStage.is_published = req.query.is_published;
@@ -71,6 +100,7 @@ exports.posts_list = [
         let posts = await Post.aggregate(
             getAggregationPipeline(
                 req.query.limit,
+                searchStage,
                 matchStage,
                 sortStage
             )
