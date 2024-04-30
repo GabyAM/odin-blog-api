@@ -34,21 +34,19 @@ exports.validatePostId = validateId;
 exports.posts_list = [
     validatePaginationParams(),
     validationMiddleware,
-    authenticate,
     query('is_published', 'The is_published parameter must be a boolean value')
         .optional()
         .isIn(['true', 'false'])
         .toBoolean(),
+    validationMiddleware,
+    async (req, res, next) => {
+        if (!req.query.is_published || req.query.is_published === false) {
+            return authenticate(req, res, next);
+        }
+        next();
+    },
     asyncHandler(async (req, res, next) => {
         const matchStage = {};
-        if (
-            !req.user.is_admin &&
-            (!req.query.is_published || req.query.is_published === true)
-        ) {
-            res.status(401).send(
-                'The user is not authorized to perform this action'
-            );
-        }
 
         let searchStage = null;
         if (req.query.search) {
