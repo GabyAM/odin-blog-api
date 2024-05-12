@@ -5,7 +5,10 @@ const bcrypt = require('bcryptjs');
 const { default: mongoose } = require('mongoose');
 const validationMiddleware = require('../middleware/validation');
 const requireBody = require('../middleware/bodyRequire');
-const { validatePaginationParams } = require('../utilities/validation');
+const {
+    validatePaginationParams,
+    validateImage
+} = require('../utilities/validation');
 const getAggregationPipeline = require('../utilities/pagination');
 const {
     authenticate,
@@ -13,9 +16,12 @@ const {
 } = require('../middleware/authentication');
 const Post = require('../models/post');
 const Comment = require('../models/comment');
+const uploadImage = require('../middleware/fileUpload');
+const parseFormData = require('../middleware/parseFormData');
+const fs = require('fs');
 
 const validateId = () =>
-    param('id').custom(async (value) => {
+    param('id').custom(async (value, { req }) => {
         if (!mongoose.Types.ObjectId.isValid(value)) {
             throw new Error('invalid user id');
         }
@@ -23,6 +29,7 @@ const validateId = () =>
         if (!user) {
             throw new Error('user not found');
         }
+        req.targetUser = user;
     });
 
 exports.users_list = [
@@ -301,5 +308,135 @@ exports.user_unban_post = [
         user.is_banned = false;
         await user.save();
         res.send({ message: 'User banned successfully' });
+    })
+];
+
+exports.user_update_post = [
+    requireBody,
+    validateId(),
+    validationMiddleware,
+    authenticate,
+    parseFormData,
+    body('name')
+        .optional()
+        .isString()
+        .withMessage('name has to be a string')
+        .trim()
+        .isLength({ min: 1 })
+        .withMessage('name must not be empty')
+        .escape(),
+    body('email')
+        .optional()
+        .isEmail()
+        .withMessage('email is not in the correct format')
+        .custom(async (value) => {
+            const user = await User.findOne({ email: value }).exec();
+            if (user) {
+                throw new Error('Email is already in use');
+            }
+        })
+        .escape(),
+    body('oldPassword')
+        .optional()
+        .isString()
+        .withMessage('oldPassword has to be a string')
+        .trim()
+        .isLength({
+            min: 8
+        })
+        .withMessage('Password must contain at least 8 characters')
+        .custom((value, { req }) => {
+            return new Promise((resolve, reject) => {
+                const user = req.targetUser;
+                bcrypt.compare(value, user.password, (err, match) => {
+                    if (err) {
+                        reject(new Error("Couldn't compare passwords"));
+                    }
+                    if (!match) {
+                        reject(new Error('Incorrect user password'));
+                    }
+                    resolve();
+                });
+            });
+        })
+        .escape(),
+    body('newPassword')
+        .optional()
+        .isString()
+        .withMessage('newPassword has to be a string')
+        .trim()
+        .isLength({
+            min: 8
+        })
+        .withMessage('Password must contain at least 8 characters')
+        .custom((value, { req }) => {
+            if (value === req.body.oldPassword) {
+                throw new Error('Enter a different password');
+            }
+            return true;
+        })
+        .escape(),
+    body('passwords')
+        .custom((value, { req }) => {
+            return (
+                (req.body.oldPassword && req.body.newPassword) ||
+                (!req.body.newPassword && !req.body.oldPassword)
+            );
+        })
+        .withMessage('Both passwords are required'),
+    validateImage(),
+    validationMiddleware,
+    asyncHandler(async (req, res, next) => {
+        if (!req.user.is_admin && req.user._id !== req.params.id) {
+            return res
+                .status(401)
+                .send(
+                    'Unauthorized to update user: only an admin or the user itself can do it'
+                );
+        }
+
+        if (Object.keys(req.body).length === 0) {
+            return res.status(400).send({
+                message: "Can't update user: no values were provided"
+            });
+        }
+
+        const { name, email, oldPassword, newPassword, image } = req.body;
+        const user = req.targetUser;
+
+        if (name) user.name = name;
+        if (email) user.email = email;
+        if (newPassword && oldPassword) {
+            try {
+                const hashedPassword = await bcrypt.hash(newPassword, 10);
+                user.password = hashedPassword;
+            } catch (e) {
+                return res.status(500).send({
+                    error: "Internal server error: couldn't update the password"
+                });
+            }
+        }
+        if (image) {
+            if (user.image !== '/images/profile.png') {
+                try {
+                    await fs.unlinkSync(`./public${user.image}`);
+                } catch (e) {
+                    return next(
+                        new Error("Internal server error: couldn't update user")
+                    );
+                }
+            }
+        }
+
+        uploadImage(req, res, async (err) => {
+            if (err) {
+                next(new Error("Internal server error: couldn't update user"));
+            }
+            if (image) {
+                user.image = req.imageUrl;
+            }
+            await user.save();
+            res.send({ message: 'User updated successfully' });
+        });
     })
 ];
