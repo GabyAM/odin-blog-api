@@ -436,7 +436,18 @@ exports.user_update_post = [
                 user.image = req.imageUrl;
             }
             await user.save();
-            res.send({ message: 'User updated successfully' });
+
+            res.send({
+                message: 'User updated successfully',
+                user: {
+                    _id: user._id,
+                    name: user.name,
+                    email: user.email,
+                    image: user.image,
+                    is_banned: user.is_banned,
+                    is_admin: user.is_admin
+                }
+            });
         });
     })
 ];
