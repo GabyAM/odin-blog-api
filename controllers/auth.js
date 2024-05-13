@@ -6,30 +6,42 @@ const requireBody = require('../middleware/bodyRequire');
 const User = require('../models/user');
 const bcrypt = require('bcryptjs');
 
-exports.refresh = (req, res, next) => {
+exports.refresh = async (req, res, next) => {
     const refreshToken = req.cookies.refreshToken;
     if (!refreshToken) {
-        res.status(401).send('Unable to refresh without refresh token');
-    } else {
+        return res.status(401).send('Unable to refresh without refresh token');
+    }
+    try {
+        const decodedRefreshToken = jwt.verify(
+            refreshToken,
+            'tokensecretchangelater'
+        );
+        let user;
         try {
-            const decodedRefreshToken = jwt.verify(
-                refreshToken,
-                'tokensecretchangelater'
-            );
-            const accessToken = jwt.sign(
-                {
-                    id: decodedRefreshToken.id,
-                    name: decodedRefreshToken.name,
-                    email: decodedRefreshToken.email,
-                    image: decodedRefreshToken.image
-                },
-                'tokensecretchangelater',
-                { expiresIn: '5m' }
-            );
-            res.send({ message: 'token refreshed', accessToken });
+            user = await User.findById(decodedRefreshToken.id);
         } catch (e) {
-            res.status(400).send('Invalid refresh token');
+            return res
+                .status(500)
+                .send('Something went wrong while refreshing');
         }
+        if (!user || user.is_banned) {
+            return res
+                .status(401)
+                .send("The user doesn't exist or is not allowed");
+        }
+        const accessToken = jwt.sign(
+            {
+                id: user._id,
+                name: user.name,
+                email: user.email,
+                image: user.image
+            },
+            'tokensecretchangelater',
+            { expiresIn: '5m' }
+        );
+        res.send({ message: 'token refreshed', accessToken });
+    } catch (e) {
+        res.status(400).send('Invalid refresh token');
     }
 };
 
