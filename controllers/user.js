@@ -19,6 +19,7 @@ const Comment = require('../models/comment');
 const uploadImage = require('../middleware/fileUpload');
 const parseFormData = require('../middleware/parseFormData');
 const fs = require('fs');
+const { validatePostId } = require('./post.js');
 
 const validateId = () =>
     param('id').custom(async (value, { req }) => {
@@ -191,7 +192,7 @@ exports.user_detail = [
     asyncHandler(async (req, res, next) => {
         const user = await User.findById(
             req.params.id,
-            'name email is_admin is_banned image'
+            'name email is_admin is_banned image saved_posts'
         );
         res.send(user);
     })
@@ -449,5 +450,39 @@ exports.user_update_post = [
                 }
             });
         });
+    })
+];
+
+exports.user_save_post = [
+    validatePostId(),
+    authenticate,
+    asyncHandler(async (req, res, next) => {
+        const user = req.user;
+        if (user.saved_posts.includes(req.targetPost._id)) {
+            res.status(409).send({
+                error: 'Cannot save post, the post is already saved'
+            });
+        }
+        user.saved_posts.push(req.targetPost._id);
+        await user.save();
+        res.send({ message: 'Post saved successfully' });
+    })
+];
+
+exports.user_unsave_post = [
+    validatePostId(),
+    authenticate,
+    asyncHandler(async (req, res, next) => {
+        const user = req.user;
+        const postIndex = user.saved_posts.indexOf(req.targetPost._id);
+        if (postIndex === -1) {
+            return res.status(409).send({
+                error: 'Cannot unsave post, the post is not saved'
+            });
+        }
+        user.saved_posts.splice(postIndex, 1);
+
+        await user.save();
+        res.send({ message: 'Post unsaved successfully' });
     })
 ];
