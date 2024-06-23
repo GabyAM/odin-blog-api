@@ -189,11 +189,33 @@ exports.user_create = [
 exports.user_detail = [
     validateId(),
     validationMiddleware,
+    async (req, res, next) => {
+        if (req.headers.authorization) {
+            return authenticate(req, res, next);
+        }
+        next();
+    },
     asyncHandler(async (req, res, next) => {
-        const user = await User.findById(
-            req.params.id,
-            'name email is_admin is_banned image saved_posts'
-        );
+        let user;
+        if (req.user && req.user._id.toString() === req.params.id) {
+            user = await User.findById(
+                req.params.id,
+                'name email is_admin is_banned image saved_posts'
+            ).populate({
+                path: 'saved_posts',
+                populate: [
+                    {
+                        path: 'author',
+                        select: 'name'
+                    }
+                ]
+            });
+        } else {
+            user = await User.findById(
+                req.params.id,
+                'name email is_admin is_banned image'
+            );
+        }
         res.send(user);
     })
 ];
@@ -255,7 +277,11 @@ exports.user_promote_post = [
         }
         user.is_admin = true;
         await user.save();
-        res.send({ message: 'User promoted successfully' });
+        const { _id, name, email, image, is_banned, is_admin } = user;
+        res.send({
+            message: 'User promoted successfully',
+            user: { _id, name, email, image, is_banned, is_admin }
+        });
     })
 ];
 
@@ -273,7 +299,11 @@ exports.user_demote_post = [
         }
         user.is_admin = false;
         await user.save();
-        res.send({ message: 'User promoted successfully' });
+        const { _id, name, email, image, is_banned, is_admin } = user;
+        res.send({
+            message: 'User promoted successfully',
+            user: { _id, name, email, image, is_banned, is_admin }
+        });
     })
 ];
 
@@ -291,7 +321,11 @@ exports.user_ban_post = [
         user.is_admin = false;
         user.is_banned = true;
         await user.save();
-        res.send({ message: 'User banned successfully' });
+        const { _id, name, email, image, is_banned, is_admin } = user;
+        res.send({
+            message: 'User banned successfully',
+            user: { _id, name, email, image, is_banned, is_admin }
+        });
     })
 ];
 
@@ -308,7 +342,11 @@ exports.user_unban_post = [
         }
         user.is_banned = false;
         await user.save();
-        res.send({ message: 'User banned successfully' });
+        const { _id, name, email, image, is_banned, is_admin } = user;
+        res.send({
+            message: 'User banned successfully',
+            user: { _id, name, email, image, is_banned, is_admin }
+        });
     })
 ];
 
@@ -455,6 +493,7 @@ exports.user_update_post = [
 
 exports.user_save_post = [
     validatePostId(),
+    validationMiddleware,
     authenticate,
     asyncHandler(async (req, res, next) => {
         const user = req.user;
@@ -484,5 +523,16 @@ exports.user_unsave_post = [
 
         await user.save();
         res.send({ message: 'Post unsaved successfully' });
+    })
+];
+
+exports.user_check_saved_post = [
+    validatePostId(),
+    authenticate,
+    asyncHandler(async (req, res, next) => {
+        const isSaved = req.user.saved_posts.includes(req.params.id);
+        res.send({
+            isSaved
+        });
     })
 ];
