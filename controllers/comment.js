@@ -13,7 +13,7 @@ const getAggregationPipeline = require('../utilities/pagination.js');
 const { validatePaginationParams } = require('../utilities/validation.js');
 
 const validateId = () =>
-    param('id').custom(async (value) => {
+    param('id').custom(async (value, { req }) => {
         if (!mongoose.Types.ObjectId.isValid(value)) {
             throw new Error('invalid comment id');
         }
@@ -21,6 +21,7 @@ const validateId = () =>
         if (!comment) {
             throw new Error('comment not found');
         }
+        req.targetComment = comment;
     });
 
 exports.comments_list = [
@@ -122,25 +123,11 @@ exports.comment_detail = [
             const comment = await Comment.findById(req.params.id)
                 .populate({
                     path: 'user',
-                    select: 'name email is_admin'
+                    select: 'name email is_admin is_banned image'
                 })
                 .populate({
-                    path: 'comments',
-                    select: 'user text comments createdAt',
-                    populate: [
-                        {
-                            path: 'comments',
-                            select: 'user text createdAt comments url',
-                            populate: {
-                                path: 'user',
-                                select: 'name email is_admin is_banned image'
-                            }
-                        },
-                        {
-                            path: 'user',
-                            select: 'name email is_admin is_banned image'
-                        }
-                    ]
+                    path: 'post',
+                    select: 'title summary image'
                 })
                 .exec();
             res.send(comment);
@@ -285,7 +272,8 @@ exports.post_comments = [
     validationMiddleware,
     asyncHandler(async (req, res, next) => {
         const matchStage = {
-            post: new mongoose.Types.ObjectId(req.params.id)
+            post: new mongoose.Types.ObjectId(req.params.id),
+            parent_comment: null
         };
         if (req.query.lastCreatedAt && req.query.lastId) {
             matchStage.$or = [
@@ -301,7 +289,6 @@ exports.post_comments = [
             _id: 1
         };
         const resultsProjection = [
-            { $match: { parent_comment: null } },
             {
                 $lookup: {
                     from: 'users',
@@ -323,86 +310,73 @@ exports.post_comments = [
                 }
             },
             { $unwind: { path: '$user', preserveNullAndEmptyArrays: true } },
-            { $addFields: { user: { $ifNull: ['$user', null] } } },
+            { $addFields: { user: { $ifNull: ['$user', null] } } }
+        ];
+
+        let comments = await Comment.aggregate(
+            getAggregationPipeline(
+                req.query.limit,
+                null,
+                matchStage,
+                sortStage,
+                resultsProjection
+            )
+        );
+
+        comments = comments[0];
+
+        res.send(comments);
+    })
+];
+
+exports.comment_replies = [
+    validateId(),
+    validatePaginationParams(),
+    validationMiddleware,
+    asyncHandler(async (req, res, next) => {
+        const matchStage = {
+            parent_comment: req.targetComment._id
+        };
+        if (req.query.lastCreatedAt && req.query.lastId) {
+            matchStage.$or = [
+                { createdAt: { $lt: new Date(req.query.lastCreatedAt) } },
+                {
+                    createdAt: { $lt: new Date(req.query.lastCreatedAt) },
+                    _id: { $gt: req.query.lastId }
+                }
+            ];
+        }
+
+        const sortStage = {
+            createdAt: -1,
+            _id: 1
+        };
+
+        const resultsProjection = [
             {
                 $lookup: {
-                    from: 'comments',
-                    localField: 'comments',
+                    from: 'users',
+                    localField: 'user',
                     foreignField: '_id',
-                    as: 'comments',
+                    as: 'user',
                     pipeline: [
                         {
-                            $lookup: {
-                                from: 'users',
-                                localField: 'user',
-                                foreignField: '_id',
-                                as: 'user',
-                                pipeline: [
-                                    {
-                                        $project: {
-                                            _id: 1,
-                                            name: 1,
-                                            email: 1,
-                                            is_admin: 1,
-                                            is_banned: 1,
-                                            image: 1
-                                        }
-                                    }
-                                ]
-                            }
-                        },
-                        {
-                            $unwind: {
-                                path: '$user',
-                                preserveNullAndEmptyArrays: true
-                            }
-                        },
-                        { $addFields: { user: { $ifNull: ['$user', null] } } },
-                        {
-                            $lookup: {
-                                from: 'comments',
-                                localField: 'comments',
-                                foreignField: '_id',
-                                as: 'comments',
-                                pipeline: [
-                                    {
-                                        $lookup: {
-                                            from: 'users',
-                                            localField: 'user',
-                                            foreignField: '_id',
-                                            as: 'user',
-                                            pipeline: [
-                                                {
-                                                    $project: {
-                                                        _id: 1,
-                                                        name: 1,
-                                                        email: 1,
-                                                        is_admin: 1,
-                                                        is_banned: 1,
-                                                        image: 1
-                                                    }
-                                                }
-                                            ]
-                                        }
-                                    },
-                                    {
-                                        $unwind: {
-                                            path: '$user',
-                                            preserveNullAndEmptyArrays: true
-                                        }
-                                    },
-                                    {
-                                        $addFields: {
-                                            user: { $ifNull: ['$user', null] }
-                                        }
-                                    }
-                                ]
+                            $project: {
+                                _id: 1,
+                                name: 1,
+                                email: 1,
+                                is_admin: 1,
+                                is_banned: 1,
+                                image: 1
                             }
                         }
                     ]
                 }
-            }
+            },
+            { $unwind: { path: '$user', preserveNullAndEmptyArrays: true } },
+            { $addFields: { user: { $ifNull: ['$user', null] } } }
         ];
+
         let comments = await Comment.aggregate(
             getAggregationPipeline(
                 req.query.limit,
