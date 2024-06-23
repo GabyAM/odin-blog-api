@@ -171,6 +171,63 @@ exports.post_comment_create_post = [
         post.comment_count++;
         await post.save();
 
+        await Comment.populate(comment, {
+            path: 'user',
+            select: '_id name email image is_banned is_admin'
+        });
+        res.status(200).send({
+            message: 'comment created',
+            comment
+        });
+    })
+];
+
+exports.comment_reply_create_post = [
+    validateId(),
+    validationMiddleware,
+    body('text')
+        .isString()
+        .withMessage('Comment text has to be a string')
+        .trim()
+        .notEmpty()
+        .withMessage('Comment cannot be empty')
+        .escape(),
+    validationMiddleware,
+    authenticate,
+    asyncHandler(async (req, res, next) => {
+        const parentComment = req.targetComment;
+        const comment = new Comment({
+            user: req.user._id,
+            post: parentComment.post,
+            text: req.body.text,
+            parent_comment: parentComment._id
+        });
+
+        const db = mongoose.connection;
+        const session = await db.startSession();
+        try {
+            await session.startTransaction();
+
+            await comment.save();
+            parentComment.comments.push(comment);
+            await parentComment.save();
+
+            const post = await Post.findById(parentComment.post);
+            console.log(post.comment_count);
+            post.comment_count++;
+            console.log(post.comment_count);
+            await post.save();
+
+            await session.commitTransaction();
+            session.endSession();
+        } catch (e) {
+            await session.abortTransaction();
+            session.endSession();
+            return res.status(500).send({
+                message: "Internal server error: couldn't add the comment"
+            });
+        }
+
         res.status(200).send({
             message: 'comment created',
             comment
@@ -186,7 +243,7 @@ exports.comment_update_post = [
     authenticate,
     asyncHandler(async (req, res, next) => {
         const oldComment = await Comment.findById(req.params.id).exec();
-        if (oldComment.user.toString() !== req.user.id) {
+        if (!req.user.is_admin && oldComment.user.toString() !== req.user.id) {
             res.status(403).send('Cannot edit comments from other users');
         } else {
             const comment = new Comment({
@@ -196,7 +253,6 @@ exports.comment_update_post = [
                 parent_comment: oldComment.parent_comment,
                 comments: oldComment.comments
             });
-
             await Comment.findByIdAndUpdate(comment._id, comment, {});
             res.status(200).send({
                 message: 'Comment updated',
@@ -218,25 +274,13 @@ exports.comment_delete_post = [
                 'User is not authorized to perform this action'
             );
         } else {
-            async function deleteCommentAndReplies(commentId, session) {
-                const comment =
-                    await Comment.findById(commentId).session(session);
-                comment.comments.forEach(async (reply) => {
-                    await deleteCommentAndReplies(reply, session);
-                });
-
-                await Comment.findByIdAndDelete(commentId).session(session);
-            }
-
             const db = mongoose.connection;
             const session = await db.startSession();
             try {
                 await session.startTransaction();
-
-                comment.comments.forEach(async (replyId) => {
-                    await deleteCommentAndReplies(replyId, session);
-                });
-                await Comment.findByIdAndDelete(comment._id).session(session);
+                await Comment.findByIdAndUpdate(comment._id, {
+                    $set: { user: null, text: '' }
+                }).session(session);
 
                 await session.commitTransaction();
                 session.endSession();
