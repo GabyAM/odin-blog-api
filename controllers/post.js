@@ -1,5 +1,6 @@
 const asyncHandler = require('express-async-handler');
 const Post = require('../models/post');
+const Comment = require('../models/comment');
 const { body, param, query } = require('express-validator');
 const { default: mongoose } = require('mongoose');
 const validationMiddleware = require('../middleware/validation');
@@ -18,9 +19,10 @@ const sanitizeHtml = require('sanitize-html');
 const uploadImage = require('../middleware/fileUpload');
 const parseFormData = require('../middleware/parseFormData');
 const fs = require('fs');
+const User = require('../models/user');
 
 const validateId = () =>
-    param('id').custom(async (value) => {
+    param('id').custom(async (value, { req }) => {
         if (!mongoose.Types.ObjectId.isValid(value)) {
             throw new Error('invalid post id');
         }
@@ -28,6 +30,7 @@ const validateId = () =>
         if (!post) {
             throw new Error('post not found');
         }
+        req.targetPost = post;
     });
 exports.validatePostId = validateId;
 
@@ -47,6 +50,14 @@ exports.posts_list = [
     },
     asyncHandler(async (req, res, next) => {
         const matchStage = {};
+        if (
+            !req.user.is_admin &&
+            (!req.query.is_published || req.query.is_published === false)
+        ) {
+            res.status(401).send(
+                'The user is not authorized to perform this action'
+            );
+        }
 
         let searchStage = null;
         if (req.query.search) {
@@ -95,12 +106,37 @@ exports.posts_list = [
             createdAt: -1,
             _id: 1
         };
+
+        const postsProjection = [
+            {
+                $lookup: {
+                    from: 'users',
+                    localField: 'author',
+                    foreignField: '_id',
+                    as: 'author',
+                    pipeline: [
+                        {
+                            $project: {
+                                _id: 1,
+                                name: 1,
+                                email: 1,
+                                is_admin: 1,
+                                is_banned: 1,
+                                image: 1
+                            }
+                        }
+                    ]
+                }
+            },
+            { $unwind: { path: '$author', preserveNullAndEmptyArrays: true } }
+        ];
         let posts = await Post.aggregate(
             getAggregationPipeline(
                 req.query.limit,
                 searchStage,
                 matchStage,
-                sortStage
+                sortStage,
+                postsProjection
             )
         );
         posts = posts[0];
@@ -216,10 +252,13 @@ exports.post_delete_post = [
 
             await Post.findByIdAndDelete(req.params.id).session(session);
             await Comment.deleteMany({ post: req.params.id }).session(session);
+            await User.updateMany(
+                { saved_posts: req.targetPost._id },
+                { $pull: { saved_posts: req.targetPost._id } }
+            ).session(session);
             await session.commitTransaction();
             session.endSession();
         } catch (e) {
-            console.log(e);
             await session.abortTransaction();
             session.endSession();
             return res.status(500).send({
@@ -233,7 +272,7 @@ exports.post_delete_post = [
 exports.post_publish_post = [
     validateId(),
     validationMiddleware,
-    authenticate,
+    authenticateAdmin,
     asyncHandler(async (req, res, next) => {
         try {
             const post = await Post.findById(req.params.id).exec();
@@ -242,9 +281,9 @@ exports.post_publish_post = [
             }
             post.is_published = true;
             await post.save();
-            res.send(post);
+            res.send({ message: 'post published successfully', post });
         } catch (e) {
-            res.status(400).send({ errors: mapErrors(e) });
+            res.status(500).send({ error: e.message });
         }
     })
 ];
@@ -252,7 +291,7 @@ exports.post_publish_post = [
 exports.post_unpublish_post = [
     validateId(),
     validationMiddleware,
-    authenticate,
+    authenticateAdmin,
     asyncHandler(async (req, res, next) => {
         try {
             const post = await Post.findById(req.params.id).exec();
@@ -261,9 +300,9 @@ exports.post_unpublish_post = [
             }
             post.is_published = false;
             await post.save();
-            res.send(post);
+            res.send({ message: 'post unpublished successfully', post });
         } catch (e) {
-            res.status(400).send({ errors: mapErrors(e) });
+            res.status(500).send({ error: e.message });
         }
     })
 ];
