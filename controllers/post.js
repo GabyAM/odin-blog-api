@@ -170,7 +170,13 @@ exports.post_create_post = [
     parseFormData,
     body('title').optional({ values: 'falsy' }).escape(),
     body('summary').optional({ values: 'falsy' }).escape(),
-    body('text').optional({ values: 'falsy' }).escape(),
+    body('text')
+        .optional({ values: 'falsy' })
+        .customSanitizer((value) => {
+            return sanitizeHtml(value, {
+                allowedTags: sanitizeHtml.defaults.allowedTags.concat(['img'])
+            });
+        }),
     validateImage(),
     validationMiddleware,
     uploadImage,
@@ -231,7 +237,18 @@ exports.post_update_post = [
             post.image = req.imageUrl;
         }
 
-        await post.save();
+        try {
+            await post.save();
+        } catch (e) {
+            if (e.name === 'ValidationError') {
+                const errors = {};
+                Object.keys(e.errors).forEach((key) => {
+                    errors[key] = e.errors[key].message;
+                });
+                return res.status(400).send({ errors });
+            }
+            throw new Error("Internal server error: couldn't publish the post");
+        }
 
         res.status(200).send({
             message: 'Post updated',
@@ -262,7 +279,7 @@ exports.post_delete_post = [
             await session.abortTransaction();
             session.endSession();
             return res.status(500).send({
-                message: "Internal server error: couldn't delete the post"
+                error: "Internal server error: couldn't delete the post"
             });
         }
         res.status(200).send({ message: 'Post deleted successfully' });
@@ -280,7 +297,20 @@ exports.post_publish_post = [
                 return res.status(409).send('Post is already published');
             }
             post.is_published = true;
-            await post.save();
+            try {
+                await post.save();
+            } catch (e) {
+                if (e.name === 'ValidationError') {
+                    const errors = {};
+                    Object.keys(e.errors).forEach((key) => {
+                        errors[key] = e.errors[key].message;
+                    });
+                    return res.status(400).send({ errors });
+                }
+                throw new Error(
+                    "Internal server error: couldn't publish the post"
+                );
+            }
             res.send({ message: 'post published successfully', post });
         } catch (e) {
             res.status(500).send({ error: e.message });

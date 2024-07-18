@@ -71,14 +71,16 @@ exports.login = [
         try {
             const user = await User.findOne({ email: req.body.email });
             if (!user) {
-                res.status(401).send({ errors: { email: 'Incorrect email' } });
+                return res
+                    .status(401)
+                    .send({ errors: { email: 'Incorrect email' } });
             }
             const match = await bcrypt.compare(
                 req.body.password,
                 user.password
             );
             if (!match) {
-                res.status(401).send({
+                return res.status(401).send({
                     errors: { password: 'Incorrect password' }
                 });
             }
@@ -109,7 +111,7 @@ exports.login = [
                 })
                 .send({ message: 'Auth passed', accessToken });
         } catch (e) {
-            return res.status(500).send(e.message);
+            return res.status(500).send({ error: e.message });
         }
     })
 ];
