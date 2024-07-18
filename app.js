@@ -42,9 +42,13 @@ app.use(function (req, res, next) {
 
 // error handler
 app.use(function (err, req, res, next) {
+    let message = err.message;
+    if (err.type === 'entity.parse.failed') {
+        message = 'Invalid body format';
+    }
     res.status(err.status || 500).send({
         status: err.status || 500,
-        message: err.message
+        message
     });
 });
 

@@ -2,7 +2,6 @@ const asyncHandler = require('express-async-handler');
 const { body } = require('express-validator');
 const jwt = require('jsonwebtoken');
 const validationMiddleware = require('../middleware/validation');
-const requireBody = require('../middleware/bodyRequire');
 const User = require('../models/user');
 const bcrypt = require('bcryptjs');
 
@@ -46,7 +45,6 @@ exports.refresh = async (req, res, next) => {
 };
 
 exports.login = [
-    requireBody,
     body('email')
         .bail()
         .exists()

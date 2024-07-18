@@ -5,7 +5,6 @@ const { body, param, query } = require('express-validator');
 const { default: mongoose } = require('mongoose');
 const validationMiddleware = require('../middleware/validation');
 const mapErrors = require('../mappers/error');
-const requireBody = require('../middleware/bodyRequire');
 const {
     authenticate,
     authenticateAdmin
@@ -198,7 +197,6 @@ exports.post_create_post = [
 ];
 
 exports.post_update_post = [
-    requireBody,
     validateId(),
     validationMiddleware,
     authenticateAdmin,

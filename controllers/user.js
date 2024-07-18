@@ -4,7 +4,6 @@ const { body, param, query } = require('express-validator');
 const bcrypt = require('bcryptjs');
 const { default: mongoose } = require('mongoose');
 const validationMiddleware = require('../middleware/validation');
-const requireBody = require('../middleware/bodyRequire');
 const {
     validatePaginationParams,
     validateImage
@@ -119,7 +118,6 @@ exports.users_list = [
 ];
 
 exports.user_create = [
-    requireBody,
     body('name')
         .bail()
         .exists()
@@ -351,7 +349,6 @@ exports.user_unban_post = [
 ];
 
 exports.user_update_post = [
-    requireBody,
     validateId(),
     validationMiddleware,
     authenticate,
