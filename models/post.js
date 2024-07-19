@@ -28,11 +28,13 @@ postSchema.path('title').validate(function (value) {
 postSchema.path('summary').validate(function (value) {
     if (this.is_published) {
         return (
-            typeof value === 'string' && value.length >= 8 && value.length <= 80
+            typeof value === 'string' &&
+            value.length >= 8 &&
+            value.length <= 160
         );
     }
     return true;
-}, 'Summary length must be between 8 and 80 characters');
+}, 'Summary length must be between 8 and 160 characters');
 postSchema.path('text').validate(function (value) {
     if (this.is_published) {
         return typeof value === 'string' && value.length > 50;

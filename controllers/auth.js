@@ -55,7 +55,8 @@ exports.login = [
         .bail()
         .isEmail()
         .withMessage('incorrect email format')
-        .escape(),
+        .escape()
+        .toLowerCase(),
     body('password')
         .bail()
         .exists()

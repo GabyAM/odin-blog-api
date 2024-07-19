@@ -5,7 +5,7 @@ const commentSchema = new Schema(
     {
         post: { type: Schema.Types.ObjectId, ref: 'Post' },
         user: { type: Schema.Types.ObjectId, ref: 'User' },
-        text: String,
+        text: { type: String, required: true },
         parent_comment: {
             type: Schema.Types.ObjectId,
             ref: 'Comment',
@@ -15,10 +15,6 @@ const commentSchema = new Schema(
     },
     { timestamps: true }
 );
-
-commentSchema.virtual('url').get(function () {
-    return `/comment/:${this._id}`;
-});
 
 const Comment = mongoose.model('Comment', commentSchema);
 module.exports = Comment;

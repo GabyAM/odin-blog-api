@@ -139,7 +139,8 @@ exports.user_create = [
                 throw new Error('email already in use');
             }
         })
-        .escape(),
+        .escape()
+        .toLowerCase(),
     body('password')
         .bail()
         .exists()
@@ -158,20 +159,9 @@ exports.user_create = [
         .custom((value, { req }) => {
             return value === req.body.password;
         })
-        .withMessage('Passwords do not match')
-        .escape(),
+        .withMessage('Passwords do not match'),
     validationMiddleware,
     asyncHandler(async (req, res, next) => {
-        try {
-            bcrypt.hash(req.body.password, 10, async (err, hashedPassword) => {
-                if (err) {
-                    throw new Error(err);
-                }
-                const user = new User({
-                    name: req.body.name,
-                    email: req.body.email,
-                    password: hashedPassword,
-                    is_admin: false,
                     is_banned: false
                 });
 
@@ -371,7 +361,8 @@ exports.user_update_post = [
                 throw new Error('Email is already in use');
             }
         })
-        .escape(),
+        .escape()
+        .toLowerCase(),
     body('oldPassword')
         .optional()
         .isString()
@@ -431,9 +422,10 @@ exports.user_update_post = [
                 );
         }
 
-        if (Object.keys(req.body).length === 0) {
+        const { name, email, oldPassword, newPassword, image } = req.body;
+        if (!(name || email || oldPassword || newPassword || image)) {
             return res.status(400).send({
-                message: "Can't update user: no values were provided"
+                error: "Can't update user: no values were provided"
             });
         }
 
