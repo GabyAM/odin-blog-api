@@ -119,18 +119,17 @@ exports.users_list = [
 
 exports.user_create = [
     body('name')
-        .bail()
         .exists()
         .withMessage('You need to provide a name')
-        .bail()
-        .notEmpty()
+        .isString()
+        .withMessage('name has to be a string')
+        .trim()
+        .isLength({ min: 1 })
         .withMessage('name must not be empty')
         .escape(),
     body('email')
-        .bail()
         .exists()
         .withMessage('You need to provide an email')
-        .bail()
         .isEmail()
         .withMessage('email is not in the correct format')
         .custom(async (value) => {
@@ -142,19 +141,19 @@ exports.user_create = [
         .escape()
         .toLowerCase(),
     body('password')
-        .bail()
         .exists()
         .withMessage('You need to provide a password')
-        .bail()
+        .isString()
+        .withMessage('password has to be a string')
         .isLength({
-            min: 5
+            min: 8
         })
-        .withMessage('Password must contain at least 8 characters')
-        .escape(),
+        .withMessage('Password must contain at least 8 characters'),
     body('password-confirm')
-        .bail()
         .exists()
         .withMessage('You need to provide a password confirm')
+        .isString()
+        .withMessage('password confirm has to be a string')
         .bail()
         .custom((value, { req }) => {
             return value === req.body.password;
@@ -162,15 +161,37 @@ exports.user_create = [
         .withMessage('Passwords do not match'),
     validationMiddleware,
     asyncHandler(async (req, res, next) => {
-                    is_banned: false
-                });
+        const user = new User({
+            name: req.body.name,
+            email: req.body.email,
+            password: req.body.password,
+            is_admin: false,
+            is_banned: false
+        });
 
-                await user.save();
-                res.status(200).send(user);
-            });
+        try {
+            await user.save();
         } catch (e) {
-            res.status(500).send(e);
+            if (e.name === 'ValidationError') {
+                const errors = {};
+                Object.keys(e.errors).forEach((key) => {
+                    errors[key] = e.errors[key].message;
+                });
+                return res.status(400).send({ errors });
+            }
+            throw new Error("Internal server error: couldn't create the user");
         }
+        res.status(200).send({
+            message: 'User created successfully',
+            user: {
+                _id: user._id,
+                name: user.name,
+                email: user.email,
+                image: user.image,
+                is_banned: user.is_banned,
+                is_admin: user.is_admin
+            }
+        });
     })
 ];
 
@@ -385,8 +406,7 @@ exports.user_update_post = [
                     resolve();
                 });
             });
-        })
-        .escape(),
+        }),
     body('newPassword')
         .optional()
         .isString()
@@ -401,8 +421,7 @@ exports.user_update_post = [
                 throw new Error('Enter a different password');
             }
             return true;
-        })
-        .escape(),
+        }),
     body('passwords')
         .custom((value, { req }) => {
             return (
@@ -428,22 +447,11 @@ exports.user_update_post = [
                 error: "Can't update user: no values were provided"
             });
         }
-
-        const { name, email, oldPassword, newPassword, image } = req.body;
         const user = req.targetUser;
 
         if (name) user.name = name;
         if (email) user.email = email;
-        if (newPassword && oldPassword) {
-            try {
-                const hashedPassword = await bcrypt.hash(newPassword, 10);
-                user.password = hashedPassword;
-            } catch (e) {
-                return res.status(500).send({
-                    error: "Internal server error: couldn't update the password"
-                });
-            }
-        }
+        if (newPassword && oldPassword) user.password = newPassword;
         if (image) {
             if (user.image !== '/images/profile.png') {
                 try {
@@ -463,7 +471,20 @@ exports.user_update_post = [
             if (image) {
                 user.image = req.imageUrl;
             }
-            await user.save();
+            try {
+                await user.save();
+            } catch (e) {
+                if (e.name === 'ValidationError') {
+                    const errors = {};
+                    Object.keys(e.errors).forEach((key) => {
+                        errors[key] = e.errors[key].message;
+                    });
+                    return res.status(400).send({ errors });
+                }
+                throw new Error(
+                    "Internal server error: couldn't update the user"
+                );
+            }
 
             res.send({
                 message: 'User updated successfully',

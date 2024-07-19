@@ -43,20 +43,12 @@ exports.posts_list = [
     validationMiddleware,
     async (req, res, next) => {
         if (!req.query.is_published || req.query.is_published === false) {
-            return authenticate(req, res, next);
+            return authenticateAdmin(req, res, next);
         }
         next();
     },
     asyncHandler(async (req, res, next) => {
         const matchStage = {};
-        if (
-            !req.user.is_admin &&
-            (!req.query.is_published || req.query.is_published === false)
-        ) {
-            res.status(401).send(
-                'The user is not authorized to perform this action'
-            );
-        }
 
         let searchStage = null;
         if (req.query.search) {
@@ -151,14 +143,8 @@ exports.post_detail = [
         if (post.is_published) {
             res.send(post);
         } else {
-            authenticate(req, res, () => {
-                if (!req.user.is_admin) {
-                    res.status(401).send(
-                        'User is not authorized to perform this action'
-                    );
-                } else {
-                    res.send(post);
-                }
+            authenticateAdmin(req, res, () => {
+                res.send(post);
             });
         }
     })

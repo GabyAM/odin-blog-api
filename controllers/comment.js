@@ -145,11 +145,12 @@ exports.post_comment_create_post = [
     }),
     validationMiddleware,
     body('text')
-        .bail()
         .exists()
         .withMessage('You need to provide a text')
-        .bail()
-        .notEmpty()
+        .isString()
+        .withMessage('comment has to be a string')
+        .trim()
+        .isLength({ min: 1 })
         .withMessage('comment cannot be empty')
         .escape(),
     validationMiddleware,
@@ -186,11 +187,13 @@ exports.comment_reply_create_post = [
     validateId(),
     validationMiddleware,
     body('text')
+        .exists()
+        .withMessage('You need to provide a text')
         .isString()
-        .withMessage('Comment text has to be a string')
+        .withMessage('comment has to be a string')
         .trim()
-        .notEmpty()
-        .withMessage('Comment cannot be empty')
+        .isLength({ min: 1 })
+        .withMessage('comment cannot be empty')
         .escape(),
     validationMiddleware,
     authenticate,
@@ -238,7 +241,15 @@ exports.comment_reply_create_post = [
 exports.comment_update_post = [
     validateId(),
     validationMiddleware,
-    body('text', 'comment cannot be empty').trim().notEmpty().escape(),
+    body('text')
+        .exists()
+        .withMessage('You need to provide a text')
+        .isString()
+        .withMessage('comment has to be a string')
+        .trim()
+        .isLength({ min: 1 })
+        .withMessage('comment cannot be empty')
+        .escape(),
     validationMiddleware,
     authenticate,
     asyncHandler(async (req, res, next) => {
