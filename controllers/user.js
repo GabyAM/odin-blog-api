@@ -44,6 +44,17 @@ exports.users_list = [
         .isIn(['true', 'false'])
         .toBoolean(),
     validationMiddleware,
+    async (req, res, next) => {
+        if (
+            req.query.is_admin === undefined ||
+            req.query.is_admin === true ||
+            req.query.is_banned === undefined ||
+            req.query.is_banned === true
+        ) {
+            return authenticateAdmin(req, res, next);
+        }
+        next();
+    },
     asyncHandler(async (req, res, next) => {
         let searchStage = null;
         if (req.query.search) {
