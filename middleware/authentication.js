@@ -12,12 +12,12 @@ exports.authenticate = async function (req, res, next) {
         try {
             const decodedRefreshToken = jwt.verify(
                 refreshToken,
-                'tokensecretchangelater'
+                process.env.AUTH_TOKEN_SECRET
             );
             try {
                 const decodedAccessToken = jwt.verify(
                     accessToken,
-                    'tokensecretchangelater'
+                    process.env.AUTH_TOKEN_SECRET
                 );
 
                 const user = await User.findById(decodedAccessToken.id);
@@ -51,12 +51,12 @@ exports.authenticateAdmin = async function (req, res, next) {
         try {
             const decodedRefreshToken = jwt.verify(
                 refreshToken,
-                'tokensecretchangelater'
+                process.env.AUTH_TOKEN_SECRET
             );
             try {
                 const decodedAccessToken = jwt.verify(
                     accessToken,
-                    'tokensecretchangelater'
+                    process.env.AUTH_TOKEN_SECRET
                 );
 
                 const user = await User.findById(decodedAccessToken.id);

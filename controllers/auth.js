@@ -13,7 +13,7 @@ exports.refresh = async (req, res, next) => {
     try {
         const decodedRefreshToken = jwt.verify(
             refreshToken,
-            'tokensecretchangelater'
+            process.env.AUTH_TOKEN_SECRET
         );
         let user;
         try {
@@ -35,7 +35,7 @@ exports.refresh = async (req, res, next) => {
                 email: user.email,
                 image: user.image
             },
-            'tokensecretchangelater',
+            process.env.AUTH_TOKEN_SECRET,
             { expiresIn: '5m' }
         );
         res.send({ message: 'token refreshed', accessToken });
@@ -90,7 +90,7 @@ exports.login = [
                     email: user.email,
                     image: user.image
                 },
-                'tokensecretchangelater',
+                process.env.AUTH_TOKEN_SECRET,
                 { expiresIn: '5m' }
             );
             const refreshToken = jwt.sign(
@@ -100,7 +100,7 @@ exports.login = [
                     email: user.email,
                     image: user.image
                 },
-                'tokensecretchangelater',
+                process.env.AUTH_TOKEN_SECRET,
                 { expiresIn: '14 days' }
             );
             return res
