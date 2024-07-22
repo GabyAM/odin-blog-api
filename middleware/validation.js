@@ -1,5 +1,5 @@
 const asyncHandler = require('express-async-handler');
-const { body, validationResult } = require('express-validator');
+const { validationResult } = require('express-validator');
 const mapErrors = require('../mappers/error');
 
 const validationMiddleware = asyncHandler(async (req, res, next) => {

@@ -139,7 +139,9 @@ exports.post_detail = [
     validateId(),
     validationMiddleware,
     asyncHandler(async (req, res, next) => {
-        const post = await Post.findById(req.params.id).exec();
+        const post = await Post.findById(req.params.id)
+            .populate({ path: 'author', select: 'name' })
+            .exec();
         if (post.is_published) {
             res.send(post);
         } else {
