@@ -4,6 +4,8 @@ const path = require('path');
 const cookieParser = require('cookie-parser');
 const logger = require('morgan');
 const cors = require('cors');
+const compression = require('compression');
+const helmet = require('helmet');
 
 const indexRouter = require('./routes/index');
 const userRouter = require('./routes/user');
@@ -12,6 +14,9 @@ const commentRouter = require('./routes/comment');
 const errorRouter = require('./routes/error');
 
 const app = express();
+
+app.use(compression());
+app.use(helmet());
 
 const mongoose = require('mongoose');
 mongoose.set('strictQuery', false);
@@ -22,9 +27,19 @@ async function main() {
     await mongoose.connect(mongoDB);
 }
 
-app.use(cors({ origin: 'http://localhost:5173', credentials: true })); // update origin url when ready for production
+app.use(
+    cors({
+        origin: [
+            'https://theblog-gabyams-projects.vercel.app',
+            'https://theblog-git-main-gabyams-projects.vercel.app',
+            'https://theblogadmindashboard-gabyams-projects.vercel.app',
+            'https://theblogadmindashboard-git-main-gabyams-projects.vercel.app'
+        ],
+        credentials: true
+    })
+);
 app.use(logger('dev'));
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
