@@ -310,17 +310,6 @@ exports.comment_delete_post = [
     })
 ];
 
-exports.post_comment_count = [
-    validatePostId(),
-    validationMiddleware,
-    asyncHandler(async (req, res, next) => {
-        const commentCount = await Comment.countDocuments({
-            post: req.params.id
-        });
-        res.send({ count: commentCount });
-    })
-];
-
 exports.post_comments = [
     validatePostId(),
     validatePaginationParams(),
