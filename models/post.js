@@ -8,7 +8,7 @@ const postSchema = new Schema(
         summary: { type: String },
         image: {
             type: String,
-            default: '/images/post_thumbnail_placeholder.png'
+            default: 'post_thumbnail_placeholder.png'
         },
         text: { type: String },
         comment_count: { type: Number, default: 0 },

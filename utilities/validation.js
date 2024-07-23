@@ -24,22 +24,24 @@ exports.validatePaginationParams = () => [
         .withMessage('limit has to be a number')
 ];
 
-exports.validateImage = () => [
-    body('image').custom((file) => {
-        if (file) {
-            const filetypes = /jpeg|jpg|png|gif|webp/;
+exports.validateImage = (required = false) => [
+    body('image').custom((value, { req }) => {
+        if (!required && !req.file) return true;
+        if (!req.file) throw new Error('Image is required');
 
-            const extname = filetypes.test(
-                path.extname(file.originalFilename).toLowerCase()
-            );
-            const mimetype = filetypes.test(file.mimetype);
+        const file = req.file;
+        const filetypes = /jpeg|jpg|png|gif|webp/;
 
-            if (!(extname && mimetype)) {
-                throw new Error('Invalid file format');
-            }
-            if (!(file.size < 1024 * 1024 * 5)) {
-                throw new Error('Max file size exceeded');
-            }
+        const extname = filetypes.test(
+            path.extname(file.originalname).toLowerCase()
+        );
+        const mimetype = filetypes.test(file.mimetype);
+
+        if (!(extname && mimetype)) {
+            throw new Error('Invalid file format');
+        }
+        if (!(file.size < 1024 * 1024 * 5)) {
+            throw new Error('Max file size exceeded');
         }
         return true;
     })

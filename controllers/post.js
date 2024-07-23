@@ -4,7 +4,6 @@ const Comment = require('../models/comment');
 const { body, param, query } = require('express-validator');
 const { default: mongoose } = require('mongoose');
 const validationMiddleware = require('../middleware/validation');
-const mapErrors = require('../mappers/error');
 const {
     authenticate,
     authenticateAdmin
@@ -16,9 +15,9 @@ const {
 } = require('../utilities/validation');
 const sanitizeHtml = require('sanitize-html');
 const uploadImage = require('../middleware/fileUpload');
-const parseFormData = require('../middleware/parseFormData');
-const fs = require('fs');
 const User = require('../models/user');
+const upload = require('../config/multer');
+const { handleUpdateImage } = require('../utilities/imageDB');
 
 const validateId = () =>
     param('id').custom(async (value, { req }) => {
@@ -154,7 +153,7 @@ exports.post_detail = [
 
 exports.post_create_post = [
     authenticateAdmin,
-    parseFormData,
+    upload.single('image'),
     body('title').optional({ values: 'falsy' }).escape(),
     body('summary').optional({ values: 'falsy' }).escape(),
     body('text')
@@ -166,7 +165,14 @@ exports.post_create_post = [
         }),
     validateImage(),
     validationMiddleware,
-    uploadImage,
+    (req, res, next) =>
+        uploadImage(req, res, (err) => {
+            if (err)
+                return res.status(500).send({
+                    error: "Internal server error: couldn't create post"
+                });
+            next();
+        }),
     asyncHandler(async (req, res, next) => {
         const post = new Post({
             author: req.user._id,
@@ -188,7 +194,7 @@ exports.post_update_post = [
     validateId(),
     validationMiddleware,
     authenticateAdmin,
-    parseFormData,
+    upload.single('image'),
     body('title').optional({ values: 'falsy' }).escape(),
     body('summary').optional({ values: 'falsy' }).escape(),
     body('text')
@@ -200,10 +206,18 @@ exports.post_update_post = [
         }),
     validateImage(),
     validationMiddleware,
-    uploadImage,
+    (req, res, next) =>
+        uploadImage(req, res, (err) => {
+            if (err)
+                return res.status(500).send({
+                    error: "Internal server error: couldn't update post"
+                });
+            next();
+        }),
     asyncHandler(async (req, res, next) => {
+        const image = req.file;
         const { title, summary, text } = req.body;
-        if (!(title || summary || text || req.imageUrl)) {
+        if (!(title || summary || text || image)) {
             return res
                 .status(400)
                 .send('Post not updated, no new fields were provided');
@@ -214,13 +228,17 @@ exports.post_update_post = [
         if (title) post.title = title;
         if (summary) post.summary = req.body.summary;
         if (text) post.text = req.body.text;
-        if (req.imageUrl) {
-            if (post.image !== '/images/post_thumbnail_placeholder.png') {
-                fs.unlink(`./public${post.image}`, (err) => {
-                    if (err) throw new Error(err);
-                });
-            }
-            post.image = req.imageUrl;
+        if (image) {
+            const { data, error } = await handleUpdateImage(
+                post.image,
+                image,
+                'post_thumbnail_placeholder.png'
+            );
+            if (error) {
+                return res
+                    .status(500)
+                    .send("Internal server error: couldn't update post");
+            } else post.image = data.path;
         }
 
         try {

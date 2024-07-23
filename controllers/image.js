@@ -1,13 +1,13 @@
 const { authenticateAdmin } = require('../middleware/authentication');
-const parseFormData = require('../middleware/parseFormData');
 const { validateImage } = require('../utilities/validation');
 const validationMiddleware = require('../middleware/validation');
 const uploadImage = require('../middleware/fileUpload');
+const upload = require('../config/multer');
 
 exports.upload_image = [
     authenticateAdmin,
-    parseFormData,
-    validateImage(),
+    upload.single('image'),
+    validateImage(true),
     validationMiddleware,
     uploadImage,
     (req, res, next) => {

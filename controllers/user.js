@@ -15,10 +15,13 @@ const {
 } = require('../middleware/authentication');
 const Post = require('../models/post');
 const Comment = require('../models/comment');
-const uploadImage = require('../middleware/fileUpload');
-const parseFormData = require('../middleware/parseFormData');
 const fs = require('fs');
 const { validatePostId } = require('./post.js');
+const upload = require('../config/multer.js');
+const {
+    handleUpdateImage,
+    handleUploadImage
+} = require('../utilities/imageDB.js');
 
 const validateId = () =>
     param('id').custom(async (value, { req }) => {
@@ -374,7 +377,7 @@ exports.user_update_post = [
     validateId(),
     validationMiddleware,
     authenticate,
-    parseFormData,
+    upload.single('image'),
     body('name')
         .optional()
         .isString()
@@ -452,7 +455,8 @@ exports.user_update_post = [
                 );
         }
 
-        const { name, email, oldPassword, newPassword, image } = req.body;
+        const image = req.file;
+        const { name, email, oldPassword, newPassword } = req.body;
         if (!(name || email || oldPassword || newPassword || image)) {
             return res.status(400).send({
                 error: "Can't update user: no values were provided"
@@ -464,50 +468,41 @@ exports.user_update_post = [
         if (email) user.email = email;
         if (newPassword && oldPassword) user.password = newPassword;
         if (image) {
-            if (user.image !== '/images/profile.png') {
-                try {
-                    await fs.unlinkSync(`./public${user.image}`);
-                } catch (e) {
-                    return next(
-                        new Error("Internal server error: couldn't update user")
-                    );
-                }
-            }
+            const { data, error } = await handleUpdateImage(
+                user.image,
+                image,
+                'profile.png'
+            );
+            if (error) {
+                return res
+                    .status(500)
+                    .send("Internal server error: couldn't update user");
+            } else user.image = data.path;
         }
 
-        uploadImage(req, res, async (err) => {
-            if (err) {
-                next(new Error("Internal server error: couldn't update user"));
+        try {
+            await user.save();
+        } catch (e) {
+            if (e.name === 'ValidationError') {
+                const errors = {};
+                Object.keys(e.errors).forEach((key) => {
+                    errors[key] = e.errors[key].message;
+                });
+                return res.status(400).send({ errors });
             }
-            if (image) {
-                user.image = req.imageUrl;
-            }
-            try {
-                await user.save();
-            } catch (e) {
-                if (e.name === 'ValidationError') {
-                    const errors = {};
-                    Object.keys(e.errors).forEach((key) => {
-                        errors[key] = e.errors[key].message;
-                    });
-                    return res.status(400).send({ errors });
-                }
-                throw new Error(
-                    "Internal server error: couldn't update the user"
-                );
-            }
+            throw new Error("Internal server error: couldn't update the user");
+        }
 
-            res.send({
-                message: 'User updated successfully',
-                user: {
-                    _id: user._id,
-                    name: user.name,
-                    email: user.email,
-                    image: user.image,
-                    is_banned: user.is_banned,
-                    is_admin: user.is_admin
-                }
-            });
+        res.send({
+            message: 'User updated successfully',
+            user: {
+                _id: user._id,
+                name: user.name,
+                email: user.email,
+                image: user.image,
+                is_banned: user.is_banned,
+                is_admin: user.is_admin
+            }
         });
     })
 ];

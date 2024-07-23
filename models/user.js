@@ -29,7 +29,7 @@ const userSchema = new Schema({
     },
     is_admin: { type: Boolean, default: false },
     is_banned: { type: Boolean, default: false },
-    image: { type: String, default: '/images/profile.png' },
+    image: { type: String, default: 'profile.png' },
     saved_posts: [{ type: Schema.Types.ObjectId, ref: 'Post' }]
 });
 
