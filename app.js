@@ -16,7 +16,7 @@ const errorRouter = require('./routes/error');
 const app = express();
 
 app.use(compression());
-app.use(helmet());
+app.use(helmet({ crossOriginResourcePolicy: false }));
 
 const mongoose = require('mongoose');
 mongoose.set('strictQuery', false);
