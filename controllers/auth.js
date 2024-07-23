@@ -106,7 +106,10 @@ exports.login = [
             return res
                 .status(200)
                 .cookie('refreshToken', refreshToken, {
-                    httpOnly: true
+                    httpOnly: true,
+                    secure: true,
+                    sameSite: 'none',
+                    path: '/'
                 })
                 .send({ message: 'Auth passed', accessToken });
         } catch (e) {
