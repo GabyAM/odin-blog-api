@@ -447,7 +447,7 @@ exports.user_update_post = [
     validateImage(),
     validationMiddleware,
     asyncHandler(async (req, res, next) => {
-        if (!req.user.is_admin && req.user._id !== req.params.id) {
+        if (!req.user.is_admin && req.user._id.toString() !== req.params.id) {
             return res
                 .status(401)
                 .send(
