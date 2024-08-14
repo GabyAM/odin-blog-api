@@ -4,6 +4,10 @@ API to manage users, posts, and comments from a blog. Used in two different fron
 ## Introduction
 This API was designed to be used easily in a complete blog application, with regular users and admin actions. 
 
+## Demo
+You can check the live preview of the API [here](https://theblogapi.onrender.com) \
+It may take a few seconds to start running since Render (the host) puts services to sleep when inactive
+
 ## Tech Stack
 
 Node, Express, MongoDB, Mongoose, Supabase.
@@ -11,6 +15,7 @@ Node, Express, MongoDB, Mongoose, Supabase.
 ## Features
 
 - Auth system with JWT
+- CRUD posts, users and comments
 - Image uploading
 - Key set pagination
 
@@ -65,3 +70,46 @@ Node, Express, MongoDB, Mongoose, Supabase.
 | :-------- | :------- | :-------------------------------- |:------- |
 | /image/upload    | POST | Upload an image | User
 | /error/log    | POST | Logs an error report | All* 
+
+## Database
+
+This is the current design of the database being used in the project. \
+<img width="351" alt="Blog database relation diagram" src="https://github.com/user-attachments/assets/3b303a65-285a-4a4e-b85b-28aa5933cb5c">
+
+
+## Installation
+
+#### Pre-requisites
+
+You will need a MongoDB database and a Supabase database to run the project. \
+For MongoDB, i recommend using [MongoDB Atlas](https://www.mongodb.com/products/platform/atlas-database), which is a free database host. \
+Supabase is also free, you can create your database from [it's page](https://supabase.com/)
+
+#### Running locally
+
+To run this project on your local machine, follow the steps:
+1. Clone the repository:
+```
+git clone https://github.com/GabyAM/odin-blog-api
+```
+2. Once in the folder, install NPM dependencies:
+```
+npm install
+```
+3. Create a .env file in the root folder
+4. Insert your secret data in the .env file, including the uri from your MongoDB database, the api url and key from your Supabase db and a token secret (any value)
+```
+AUTH_TOKEN_SECRET = your_token_secret
+MONGODB_URI= mongodb+srv://user:password@cluster0.example.mongodb.net/?retryWrites=true&w=majority
+SUPABASE_API_URL = your_supabase_api_url
+SUPABASE_KEY = your_supabase_api_key   
+```
+5. Optionally, you can populate the MongoDB database by using the populatedb file
+```
+node populatedb.js your_mongodb_uri
+```
+6. Start the project in dev mode
+```
+npm run devStart
+```
+
